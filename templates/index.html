@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Not The End - Token Drawer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎲 Not The End - Token Drawer</h1>
+            <p class="subtitle">Sistema HexSys per sessioni online</p>
+        </header>
+
+        <!-- Sezione di connessione -->
+        <div id="connectionSection" class="section">
+            <h2>Connessione</h2>
+            <div class="form-group">
+                <label for="playerName">Nome giocatore:</label>
+                <input type="text" id="playerName" placeholder="Inserisci il tuo nome">
+            </div>
+            <div class="button-group">
+                <button id="createRoomBtn" class="btn btn-primary">Crea nuova stanza</button>
+                <div class="join-room-group">
+                    <input type="text" id="roomIdInput" placeholder="ID stanza">
+                    <button id="joinRoomBtn" class="btn btn-secondary">Unisciti</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sezione principale di gioco (nascosta inizialmente) -->
+        <div id="gameSection" class="section hidden">
+            <!-- Info stanza -->
+            <div class="room-info">
+                <h3>Stanza: <span id="currentRoomId"></span></h3>
+                <div class="players-list">
+                    <strong>Giocatori:</strong> <span id="playersList"></span>
+                </div>
+            </div>
+
+            <!-- Configurazione sacchetto -->
+            <div class="bag-config">
+                <h2>Configurazione Sacchetto</h2>
+                <div class="token-controls">
+                    <div class="control-group">
+                        <label>Token Successo (bianchi):</label>
+                        <input type="number" id="successTokens" min="0" max="20" value="0">
+                    </div>
+                    <div class="control-group">
+                        <label>Token Complicazione (neri):</label>
+                        <input type="number" id="complicationTokens" min="0" max="20" value="0">
+                    </div>
+                    <button id="configureBagBtn" class="btn btn-primary">Configura Sacchetto</button>
+                </div>
+                <div class="bag-status">
+                    <p>Nel sacchetto: <span id="bagSuccessi">0</span> ⚪ | <span id="bagComplicazioni">0</span> ⚫</p>
+                </div>
+            </div>
+
+            <!-- Estrazione token -->
+            <div class="draw-section">
+                <h2>Estrazione Token</h2>
+                <div class="draw-controls">
+                    <label>Numero di token da estrarre:</label>
+                    <div class="draw-buttons">
+                        <button class="btn-draw" data-tokens="1">1</button>
+                        <button class="btn-draw" data-tokens="2">2</button>
+                        <button class="btn-draw" data-tokens="3">3</button>
+                        <button class="btn-draw" data-tokens="4">4</button>
+                    </div>
+                </div>
+                <div id="drawResult" class="draw-result"></div>
+            </div>
+
+            <!-- Adrenalina e Confusione -->
+            <div class="status-section">
+                <h2>Stato Personaggio</h2>
+                <div class="status-controls">
+                    <div class="status-group">
+                        <label>Adrenalina:</label>
+                        <input type="number" id="adrenalineInput" min="0" max="10" value="0">
+                        <button id="updateAdrenalineBtn" class="btn btn-small">Aggiorna</button>
+                    </div>
+                    <div class="status-group">
+                        <label>Confusione:</label>
+                        <input type="number" id="confusionInput" min="0" max="10" value="0">
+                        <button id="updateConfusionBtn" class="btn btn-small">Aggiorna</button>
+                    </div>
+                </div>
+                <div id="playersStatus" class="players-status"></div>
+            </div>
+
+            <!-- Generatore meteo -->
+            <div class="weather-section">
+                <h2>Generatore Meteo</h2>
+                <div class="weather-controls">
+                    <select id="seasonSelect">
+                        <option value="primavera">Primavera</option>
+                        <option value="estate">Estate</option>
+                        <option value="autunno">Autunno</option>
+                        <option value="inverno">Inverno</option>
+                    </select>
+                    <select id="zoneSelect">
+                        <option value="pianura">Pianura</option>
+                        <option value="collina">Collina</option>
+                        <option value="montagna">Montagna</option>
+                        <option value="costa">Costa</option>
+                    </select>
+                    <button id="generateWeatherBtn" class="btn btn-primary">Genera Meteo</button>
+                </div>
+                <div id="weatherResult" class="weather-result"></div>
+            </div>
+
+            <!-- Storico -->
+            <div class="history-section">
+                <h2>Storico Estrazioni</h2>
+                <button id="clearHistoryBtn" class="btn btn-secondary btn-small">Pulisci storico</button>
+                <div id="historyLog" class="history-log"></div>
+            </div>
+
+            <!-- Utilità -->
+            <div class="utility-section">
+                <button id="resetBagBtn" class="btn btn-danger">Reset Sacchetto</button>
+                <button id="leaveRoomBtn" class="btn btn-secondary">Lascia Stanza</button>
+            </div>
+        </div>
+
+        <!-- Log azioni -->
+        <div id="actionLog" class="action-log"></div>
+    </div>
+
+    <!-- SocketIO -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
