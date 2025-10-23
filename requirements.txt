@@ -1,0 +1,8 @@
+python-3.13.4
+```
+
+(Usa la stessa versione che Render sta installando)
+
+### 4. Oppure prova con una versione più stabile:
+```
+python-3.11.9
