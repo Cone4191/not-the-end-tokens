@@ -1,8 +1,8 @@
-python-3.13.4
-```
-
-(Usa la stessa versione che Render sta installando)
-
-### 4. Oppure prova con una versione più stabile:
-```
-python-3.11.9
+Flask==3.0.0
+   Flask-SocketIO==5.3.5
+   python-socketio==5.10.0
+   python-engineio==4.8.0
+   eventlet==0.33.3
+   gunicorn==21.2.0
+   gevent==24.2.1
+   gevent-websocket==0.10.1
