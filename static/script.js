@@ -5,6 +5,10 @@ const socket = io();
 let currentRoomId = null;
 let currentPlayerName = null;
 
+// Stato adrenalina e confusione
+let adrenalineActive = false;
+let confusionActive = false;
+
 // Elementi DOM
 const connectionSection = document.getElementById('connectionSection');
 const gameSection = document.getElementById('gameSection');
@@ -26,12 +30,10 @@ const bagComplicazioni = document.getElementById('bagComplicazioni');
 const drawButtons = document.querySelectorAll('.btn-draw');
 const drawResult = document.getElementById('drawResult');
 
-// Elementi stato
-const adrenalineInput = document.getElementById('adrenalineInput');
-const confusionInput = document.getElementById('confusionInput');
-const updateAdrenalineBtn = document.getElementById('updateAdrenalineBtn');
-const updateConfusionBtn = document.getElementById('updateConfusionBtn');
-const playersStatus = document.getElementById('playersStatus');
+// Toggle Adrenalina e Confusione
+const adrenalineToggle = document.getElementById('adrenalineToggle');
+const confusionToggle = document.getElementById('confusionToggle');
+const statusMessage = document.getElementById('statusMessage');
 
 // Elementi meteo
 const seasonSelect = document.getElementById('seasonSelect');
@@ -49,6 +51,27 @@ const leaveRoomBtn = document.getElementById('leaveRoomBtn');
 const actionLog = document.getElementById('actionLog');
 
 // === Event Listeners ===
+
+// Toggle Adrenalina
+adrenalineToggle.addEventListener('change', (e) => {
+    adrenalineActive = e.target.checked;
+    updateDrawButtons();
+    updateStatusMessage();
+    
+    if (adrenalineActive) {
+        showLog('⚡ Adrenalina attiva: dovrai estrarre 4 token!', 'success');
+    }
+});
+
+// Toggle Confusione
+confusionToggle.addEventListener('change', (e) => {
+    confusionActive = e.target.checked;
+    updateStatusMessage();
+    
+    if (confusionActive) {
+        showLog('😵 Confusione attiva: i token saranno misteriosi!', 'success');
+    }
+});
 
 createRoomBtn.addEventListener('click', () => {
     const playerName = playerNameInput.value.trim();
@@ -95,27 +118,23 @@ drawButtons.forEach(btn => {
         socket.emit('draw_tokens', {
             room_id: currentRoomId,
             num_tokens: numTokens,
-            player_name: currentPlayerName
+            player_name: currentPlayerName,
+            adrenaline: adrenalineActive,
+            confusion: confusionActive
         });
         playSound('draw');
-    });
-});
-
-updateAdrenalineBtn.addEventListener('click', () => {
-    const value = parseInt(adrenalineInput.value);
-    socket.emit('update_adrenaline', {
-        room_id: currentRoomId,
-        player_name: currentPlayerName,
-        adrenaline: value
-    });
-});
-
-updateConfusionBtn.addEventListener('click', () => {
-    const value = parseInt(confusionInput.value);
-    socket.emit('update_confusion', {
-        room_id: currentRoomId,
-        player_name: currentPlayerName,
-        confusion: value
+        
+        // Reset stati dopo il tiro
+        if (adrenalineActive) {
+            adrenalineToggle.checked = false;
+            adrenalineActive = false;
+        }
+        if (confusionActive) {
+            confusionToggle.checked = false;
+            confusionActive = false;
+        }
+        updateDrawButtons();
+        updateStatusMessage();
     });
 });
 
@@ -211,16 +230,6 @@ socket.on('tokens_drawn', (data) => {
     showLog(`${data.player} ha estratto ${data.drawn.length} token`, 'success');
 });
 
-socket.on('adrenaline_updated', (data) => {
-    updatePlayersStatus();
-    showLog(`${data.player}: Adrenalina = ${data.adrenaline}`, 'success');
-});
-
-socket.on('confusion_updated', (data) => {
-    updatePlayersStatus();
-    showLog(`${data.player}: Confusione = ${data.confusion}`, 'success');
-});
-
 socket.on('weather_generated', (data) => {
     displayWeather(data);
     showLog(`Meteo generato: ${data.meteo}`, 'success');
@@ -248,25 +257,101 @@ function updatePlayersList(players) {
     playersListSpan.textContent = players.join(', ');
 }
 
+function updateDrawButtons() {
+    drawButtons.forEach(btn => {
+        const numTokens = parseInt(btn.dataset.tokens);
+        
+        if (adrenalineActive) {
+            // Con adrenalina attiva, solo il pulsante 4 è abilitato
+            if (numTokens === 4) {
+                btn.disabled = false;
+                btn.classList.add('forced');
+            } else {
+                btn.disabled = true;
+                btn.classList.remove('forced');
+            }
+        } else {
+            // Senza adrenalina, tutti i pulsanti sono abilitati
+            btn.disabled = false;
+            btn.classList.remove('forced');
+        }
+    });
+}
+
+function updateStatusMessage() {
+    if (adrenalineActive || confusionActive) {
+        let message = '';
+        if (adrenalineActive && confusionActive) {
+            message = '⚡😵 Adrenalina + Confusione attive! Estrai 4 token misteriosi!';
+        } else if (adrenalineActive) {
+            message = '⚡ Adrenalina attiva! Devi estrarre 4 token!';
+        } else if (confusionActive) {
+            message = '😵 Confusione attiva! I token saranno misteriosi!';
+        }
+        statusMessage.textContent = message;
+        statusMessage.classList.add('active');
+    } else {
+        statusMessage.classList.remove('active');
+    }
+}
+
 function displayDrawResult(data) {
-    const tokensHtml = data.drawn.map(token => {
-        const className = token === 'successo' ? 'token-success' : 'token-complication';
-        const emoji = token === 'successo' ? '⚪' : '⚫';
-        return `<div class="token ${className}">${emoji}</div>`;
+    const isConfusion = data.confusion || false;
+    
+    // Prima mostra i token (misteriosi se confusione)
+    const tokensHtml = data.drawn.map((token, index) => {
+        if (isConfusion) {
+            return `<div class="token token-mystery" data-index="${index}">❓</div>`;
+        } else {
+            const className = token === 'successo' ? 'token-success' : 'token-complication';
+            const emoji = token === 'successo' ? '⚪' : '⚫';
+            return `<div class="token ${className}">${emoji}</div>`;
+        }
     }).join('');
     
     drawResult.innerHTML = `
         <div class="draw-info">
             <strong>${data.player}</strong> ha estratto:
         </div>
-        <div class="token-display">
+        <div class="token-display" id="tokenDisplay">
             ${tokensHtml}
         </div>
         <div class="draw-summary">
-            <p><strong>Successi:</strong> ${data.successi} ⚪</p>
-            <p><strong>Complicazioni:</strong> ${data.complicazioni} ⚫</p>
+            <p><strong>Successi:</strong> <span id="successCount">${isConfusion ? '?' : data.successi}</span> ⚪</p>
+            <p><strong>Complicazioni:</strong> <span id="complicationCount">${isConfusion ? '?' : data.complicazioni}</span> ⚫</p>
         </div>
     `;
+    
+    // Se confusione, rivela i token dopo 2 secondi
+    if (isConfusion) {
+        setTimeout(() => {
+            revealMysteryTokens(data);
+        }, 2000);
+    }
+}
+
+function revealMysteryTokens(data) {
+    const tokenDisplay = document.getElementById('tokenDisplay');
+    const tokens = tokenDisplay.querySelectorAll('.token-mystery');
+    
+    tokens.forEach((tokenEl, index) => {
+        setTimeout(() => {
+            const token = data.drawn[index];
+            const className = token === 'successo' ? 'token-success' : 'token-complication';
+            const emoji = token === 'successo' ? '⚪' : '⚫';
+            
+            tokenEl.classList.add('token-reveal');
+            tokenEl.classList.remove('token-mystery');
+            tokenEl.classList.add(className);
+            tokenEl.textContent = emoji;
+        }, index * 300);
+    });
+    
+    // Aggiorna conteggio dopo tutte le rivelazioni
+    setTimeout(() => {
+        document.getElementById('successCount').textContent = data.successi;
+        document.getElementById('complicationCount').textContent = data.complicazioni;
+    }, tokens.length * 300 + 500);
 }
 
 function addHistoryEntry(entry) {
@@ -282,18 +367,6 @@ function addHistoryEntry(entry) {
     `;
     
     historyLog.insertAdjacentHTML('afterbegin', entryHtml);
-}
-
-function updatePlayersStatus() {
-    // Questa funzione può essere espansa per mostrare lo stato di tutti i giocatori
-    // Per ora mostriamo solo lo stato del giocatore corrente
-    playersStatus.innerHTML = `
-        <div class="player-status-card">
-            <strong>${currentPlayerName}</strong>
-            <div>Adrenalina: ${adrenalineInput.value}</div>
-            <div>Confusione: ${confusionInput.value}</div>
-        </div>
-    `;
 }
 
 function displayWeather(data) {

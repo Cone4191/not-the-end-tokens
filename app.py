@@ -121,12 +121,20 @@ def handle_configure_bag(data):
 def handle_draw_tokens(data):
     """Estrai token dal sacchetto"""
     room_id = data.get('room_id')
-    num_tokens = int(data.get('num_tokens', 1))
+    num_tokens_requested = int(data.get('num_tokens', 1))
     player_name = data.get('player_name', 'Giocatore')
+    adrenaline = data.get('adrenaline', False)
+    confusion = data.get('confusion', False)
     
     if room_id not in rooms:
         emit('error', {'message': 'Stanza non trovata'})
         return
+    
+    # Se c'è adrenalina, forza estrazione di 4 token
+    if adrenaline:
+        num_tokens = 4
+    else:
+        num_tokens = num_tokens_requested
     
     bag = rooms[room_id]['bag']
     total_tokens = bag['successi'] + bag['complicazioni']
@@ -150,7 +158,9 @@ def handle_draw_tokens(data):
         'timestamp': datetime.now().isoformat(),
         'drawn': drawn,
         'successi': successi_drawn,
-        'complicazioni': complicazioni_drawn
+        'complicazioni': complicazioni_drawn,
+        'adrenaline': adrenaline,
+        'confusion': confusion
     }
     rooms[room_id]['history'].append(history_entry)
     
@@ -160,7 +170,9 @@ def handle_draw_tokens(data):
         'successi': successi_drawn,
         'complicazioni': complicazioni_drawn,
         'bag_remaining': rooms[room_id]['bag'],
-        'history': history_entry
+        'history': history_entry,
+        'adrenaline': adrenaline,
+        'confusion': confusion
     }, room=room_id)
 
 
