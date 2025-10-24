@@ -6,7 +6,7 @@ from datetime import datetime
 import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'not-the-end-secret-key-change-in-production'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'not-the-end-secret-key-change-in-production')
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Dizionario per memorizzare le stanze attive
@@ -37,6 +37,24 @@ METEO_DATA = {
         'collina': ['Neve', 'Gelido', 'Nebbia', 'Vento gelido', 'Ghiaccio'],
         'montagna': ['Tormenta', 'Neve abbondante', 'Gelo estremo', 'Vento glaciale', 'Sereno e gelido'],
         'costa': ['Freddo pungente', 'Pioggia gelida', 'Vento freddo', 'Neve rara', 'Foschia gelida']
+    },
+        'deserto': {
+        'primavera': ['Soleggiato', 'Caldo secco', 'Vento sabbioso', 'Sereno', 'Tempesta di sabbia'],
+        'estate': ['Caldo torrido', 'Sole cocente', 'Vento caldo', 'Siccità', 'Miraggio'],
+        'autunno': ['Caldo', 'Ventoso', 'Sereno', 'Tempesta di sabbia', 'Caldo secco'],
+        'inverno': ['Freddo secco', 'Soleggiato', 'Freddo notturno', 'Ventoso', 'Gelido']
+    },
+    'foresta': {
+        'primavera': ['Umido', 'Pioggia leggera', 'Nebbia', 'Soleggiato tra gli alberi', 'Ventilato'],
+        'estate': ['Ombreggiato', 'Umidità', 'Temporale', 'Caldo afoso', 'Soleggiato'],
+        'autunno': ['Nebbia fitta', 'Pioggia', 'Ventoso', 'Umido', 'Freddo umido'],
+        'inverno': ['Neve tra gli alberi', 'Gelo', 'Nebbia gelida', 'Freddo umido', 'Ghiaccio']
+    },
+    'mare': {
+        'primavera': ['Brezza marina', 'Soleggiato', 'Onde moderate', 'Nuvoloso', 'Ventoso'],
+        'estate': ['Mare calmo', 'Sole e brezza', 'Caldo umido', 'Temporale marino', 'Ventilato'],
+        'autunno': ['Mare mosso', 'Vento forte', 'Pioggia', 'Mareggiata', 'Nuvoloso'],
+        'inverno': ['Mare agitato', 'Vento gelido', 'Pioggia gelida', 'Mareggiate', 'Nebbia marina']
     }
 }
 
@@ -129,12 +147,30 @@ def handle_configure_bag(data):
         'complicazioni': complicazioni
     }, room=room_id)
 
+@socketio.on('add_help')
+def handle_add_help(data):
+    """Aggiungi aiuto (+1 token bianco)"""
+    room_id = data.get('room_id')
+    player_name = data.get('player_name', 'Giocatore')
+    
+    if room_id not in rooms:
+        emit('error', {'message': 'Stanza non trovata'})
+        return
+    
+    # Aggiungi 1 token bianco
+    rooms[room_id]['bag']['successi'] += 1
+    
+    # Broadcast a tutti nella stanza
+    emit('help_added', {
+        'helper': player_name,
+        'bag': rooms[room_id]['bag']
+    }, room=room_id)
 
 @socketio.on('draw_tokens')
 def handle_draw_tokens(data):
-    """Estrai token dal sacchetto"""
+    """Estrai token dal sacchetto con supporto adrenalina e confusione"""
     room_id = data.get('room_id')
-    num_tokens_requested = int(data.get('num_tokens', 1))
+    num_tokens = data.get('num_tokens', 1)
     player_name = data.get('player_name', 'Giocatore')
     adrenaline = data.get('adrenaline', False)
     confusion = data.get('confusion', False)
@@ -143,51 +179,143 @@ def handle_draw_tokens(data):
         emit('error', {'message': 'Stanza non trovata'})
         return
     
-    # Se c'è adrenalina, forza estrazione di 4 token
+    bag = rooms[room_id]['bag']
+    
+    # Adrenalina forza 4 token
     if adrenaline:
         num_tokens = 4
-    else:
-        num_tokens = num_tokens_requested
     
-    bag = rooms[room_id]['bag']
+    # Verifica che ci siano abbastanza token
     total_tokens = bag['successi'] + bag['complicazioni']
-    
     if total_tokens < num_tokens:
         emit('error', {'message': 'Non ci sono abbastanza token nel sacchetto'})
         return
     
-    virtual_bag = ['successo'] * bag['successi'] + ['complicazione'] * bag['complicazioni']
+    # ========== GESTIONE CONFUSIONE ==========
+    if confusion:
+        # Con confusione: i token BIANCHI diventano random
+        # I token NERI restano neri
+        
+        drawn = []
+        temp_bag = {
+            'successi': bag['successi'],
+            'complicazioni': bag['complicazioni']
+        }
+        
+        for _ in range(num_tokens):
+            if temp_bag['successi'] + temp_bag['complicazioni'] == 0:
+                break
+            
+            # Estrai un token
+            total = temp_bag['successi'] + temp_bag['complicazioni']
+            rand = random.random()
+            
+            if rand < temp_bag['complicazioni'] / total:
+                # Estratto un NERO (resta nero)
+                drawn.append('complicazione')
+                temp_bag['complicazioni'] -= 1
+            else:
+                # Estratto un BIANCO (diventa RANDOM)
+                # 50% bianco, 50% nero
+                if random.random() < 0.5:
+                    drawn.append('successo')
+                else:
+                    drawn.append('complicazione')
+                temp_bag['successi'] -= 1
+            
+            # Aggiorna sacchetto reale
+            if drawn[-1] == 'successo':
+                bag['successi'] -= 1
+            else:
+                bag['complicazioni'] -= 1
     
-    drawn = random.sample(virtual_bag, num_tokens)
+    else:
+        # ========== ESTRAZIONE NORMALE ==========
+        drawn = []
+        for _ in range(num_tokens):
+            if bag['successi'] + bag['complicazioni'] == 0:
+                break
+            
+            token_type = random.choices(
+                ['successo', 'complicazione'],
+                weights=[bag['successi'], bag['complicazioni']]
+            )[0]
+            
+            drawn.append(token_type)
+            bag[token_type] -= 1
     
-    successi_drawn = drawn.count('successo')
-    complicazioni_drawn = drawn.count('complicazione')
+    # Conta risultati
+    successi = drawn.count('successo')
+    complicazioni = drawn.count('complicazione')
     
-    rooms[room_id]['bag']['successi'] -= successi_drawn
-    rooms[room_id]['bag']['complicazioni'] -= complicazioni_drawn
-    
+    # Crea entry storico
     history_entry = {
         'player': player_name,
-        'timestamp': datetime.now().isoformat(),
         'drawn': drawn,
-        'successi': successi_drawn,
-        'complicazioni': complicazioni_drawn,
+        'successi': successi,
+        'complicazioni': complicazioni,
+        'timestamp': datetime.now().isoformat(),
         'adrenaline': adrenaline,
         'confusion': confusion
     }
+    
     rooms[room_id]['history'].append(history_entry)
     
+    # Invia risultato
     emit('tokens_drawn', {
         'player': player_name,
         'drawn': drawn,
-        'successi': successi_drawn,
-        'complicazioni': complicazioni_drawn,
-        'bag_remaining': rooms[room_id]['bag'],
+        'successi': successi,
+        'complicazioni': complicazioni,
+        'bag_remaining': bag,
         'history': history_entry,
         'adrenaline': adrenaline,
         'confusion': confusion
     }, room=room_id)
 
+@socketio.on('risk_all')
+def handle_risk_all(data):
+    """Rischia tutto - estrai fino a 5 token totali"""
+    room_id = data.get('room_id')
+    num_tokens = data.get('num_tokens', 1)
+    player_name = data.get('player_name', 'Giocatore')
+    previous_successi = data.get('previous_successi', 0)
+    previous_complicazioni = data.get('previous_complicazioni', 0)
+    # ... codice estrazione ...
+    
+    # Conta risultati NUOVI
+    new_successi = drawn.count('successo')
+    new_complicazioni = drawn.count('complicazione')
+    
+    # Calcola totali CUMULATIVI
+    total_successi = previous_successi + new_successi
+    total_complicazioni = previous_complicazioni + new_complicazioni
+    
+    # Crea entry storico
+    history_entry = {
+        'player': player_name,
+        'drawn': drawn,
+        'successi': new_successi,
+        'complicazioni': new_complicazioni,
+        'timestamp': datetime.now().isoformat(),
+        'risk_all': True,
+        'total_successi': total_successi,
+        'total_complicazioni': total_complicazioni
+    }
+    
+    rooms[room_id]['history'].append(history_entry)
+    
+    # Invia risultato con totali corretti
+    emit('risk_all_result', {
+        'player': player_name,
+        'drawn': drawn,
+        'successi': new_successi,
+        'complicazioni': new_complicazioni,
+        'total_successi': total_successi,
+        'total_complicazioni': total_complicazioni,
+        'bag_remaining': bag,
+        'history': history_entry
+    }, room=room_id)
 
 @socketio.on('return_tokens')
 def handle_return_tokens(data):

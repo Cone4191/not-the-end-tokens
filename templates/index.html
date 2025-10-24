@@ -4,331 +4,282 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Not The End - Token Drawer</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 </head>
 <body>
     <div class="container">
+        <!-- Header -->
         <header>
-            <h1>🎲 Not The End - Token Drawer</h1>
-            <p class="subtitle">Sistema HexSys per sessioni online</p>
+            <h1>🎲 Not The End</h1>
+            <p class="subtitle">Token Drawer Multiplayer</p>
         </header>
 
-        <!-- Sezione di connessione -->
+        <!-- Sezione Connessione -->
         <div id="connectionSection" class="section">
             <h2>Connessione</h2>
             <div class="form-group">
-                <label for="playerName">Nome giocatore:</label>
+                <label for="playerName">Il tuo nome:</label>
                 <input type="text" id="playerName" placeholder="Inserisci il tuo nome">
             </div>
             <div class="button-group">
                 <button id="createRoomBtn" class="btn btn-primary">Crea nuova stanza</button>
                 <div class="join-room-group">
-                    <input type="text" id="roomIdInput" placeholder="ID stanza">
+                    <input type="text" id="roomIdInput" placeholder="ID Stanza">
                     <button id="joinRoomBtn" class="btn btn-secondary">Unisciti</button>
                 </div>
             </div>
         </div>
 
-        <!-- Sezione principale di gioco (nascosta inizialmente) -->
-        <div id="gameSection" class="section hidden">
-            <!-- Info stanza -->
-            <div class="room-info">
+        <!-- Sezione Gioco (nascosta inizialmente) -->
+        <div id="gameSection" class="hidden">
+            <!-- Info Stanza -->
+            <div class="section room-info">
                 <h3>Stanza: <span id="currentRoomId"></span></h3>
-                <div class="players-list">
-                    <strong>Giocatori:</strong> <span id="playersList"></span>
-                </div>
+                <p class="players-list">Giocatori: <span id="playersList"></span></p>
+                <button id="leaveRoomBtn" class="btn btn-danger btn-small">Lascia stanza</button>
             </div>
 
-            <!-- Configurazione sacchetto -->
-            <div class="bag-config">
-                <h2>Configurazione Sacchetto</h2>
+            <!-- Configurazione Sacchetto -->
+            <div class="section">
+                <h2>🎒 Configurazione Sacchetto</h2>
                 <div class="token-controls">
                     <div class="control-group">
-                        <label>Token Successo (bianchi):</label>
-                        <input type="number" id="successTokens" min="0" max="20" value="0">
+                        <label for="successTokens">Token Successo (⚪):</label>
+                        <input type="number" id="successTokens" min="0" value="0">
                     </div>
                     <div class="control-group">
-                        <label>Token Complicazione (neri):</label>
-                        <input type="number" id="complicationTokens" min="0" max="20" value="0">
+                        <label for="complicationTokens">Token Complicazione (⚫):</label>
+                        <input type="number" id="complicationTokens" min="0" value="0">
                     </div>
-                    <button id="configureBagBtn" class="btn btn-primary">Configura Sacchetto</button>
                 </div>
-                <div class="bag-status">
-                    <p>Nel sacchetto: <span id="bagSuccessi">0</span> ⚪ | <span id="bagComplicazioni">0</span> ⚫</p>
+                <button id="configureBagBtn" class="btn btn-primary">Configura Sacchetto</button>
+                
+                <!-- Pulsante Aiuto (appare solo dopo configurazione) -->
+                <button id="addHelpBtn" class="btn btn-success hidden" style="margin-top: 10px;">
+                    💪 Aggiungi il tuo Aiuto (+1⚪)
+                </button>
+                <p id="helpStatus" class="help-status hidden"></p>
+                
+                <div class="bag-status" style="margin-top: 15px;">
+                    Sacchetto: <span id="bagSuccessi">0</span> ⚪ | <span id="bagComplicazioni">0</span> ⚫
                 </div>
             </div>
 
-            <!-- Estrazione token -->
-            <div class="draw-section">
-                <h2>Estrazione Token</h2>
+            <!-- Adrenalina e Confusione -->
+            <div class="section status-section">
+                <h2>Stato Personaggio</h2>
+                <div class="status-controls">
+                    <div class="status-toggle-group">
+                        <label class="switch-label">
+                            <span class="switch-icon">⚡</span> Adrenalina
+                        </label>
+                        <label class="switch">
+                            <input type="checkbox" id="adrenalineToggle">
+                            <span class="slider"></span>
+                        </label>
+                        <p class="status-description">Forza l'estrazione di 4 token</p>
+                    </div>
+                    
+                    <div class="status-toggle-group">
+                        <label class="switch-label">
+                            <span class="switch-icon">😵</span> Confusione
+                        </label>
+                        <label class="switch">
+                            <input type="checkbox" id="confusionToggle">
+                            <span class="slider"></span>
+                        </label>
+                        <p class="status-description">Token bianchi diventano random (⚪ o ⚫)</p>
+                    </div>
+                </div>
+                <div id="statusMessage" class="status-message"></div>
+            </div>
+
+            <!-- Estrazione Token -->
+            <div class="section">
+                <h2>🎲 Estrazione Token</h2>
                 <div class="draw-controls">
-                    <label>Numero di token da estrarre:</label>
+                    <p>Quanti token vuoi estrarre? (Max 5)</p>
                     <div class="draw-buttons">
                         <button class="btn-draw" data-tokens="1">1</button>
                         <button class="btn-draw" data-tokens="2">2</button>
                         <button class="btn-draw" data-tokens="3">3</button>
                         <button class="btn-draw" data-tokens="4">4</button>
+                        <button class="btn-draw" data-tokens="5">5</button>
                     </div>
                 </div>
                 <div id="drawResult" class="draw-result"></div>
+                
+                <!-- Pulsante Rischia Tutto -->
+                <div id="riskAllSection" class="hidden" style="margin-top: 15px; text-align: center;">
+                    <button id="riskAllBtn" class="btn btn-danger btn-large">
+                        ⚠️ RISCHIA TUTTO
+                    </button>
+                    <p style="font-size: 0.9em; color: #dc3545; margin-top: 5px;">
+                        Estrai altri token fino ad arrivare a 5 totali!
+                    </p>
+                </div>
             </div>
 
-            <!-- Adrenalina e Confusione -->
-<div class="status-section">
-    <h2>Stato Personaggio</h2>
-    <div class="status-controls">
-        <div class="status-toggle-group">
-            <label class="switch-label">
-                <span class="switch-icon">⚡</span> Adrenalina
-            </label>
-            <label class="switch">
-                <input type="checkbox" id="adrenalineToggle">
-                <span class="slider"></span>
-            </label>
-            <p class="status-description">Forza l'estrazione di 4 token</p>
-        </div>
-        
-        <div class="status-toggle-group">
-            <label class="switch-label">
-                <span class="switch-icon">😵</span> Confusione
-            </label>
-            <label class="switch">
-                <input type="checkbox" id="confusionToggle">
-                <span class="slider"></span>
-            </label>
-            <p class="status-description">Token misteriosi (? invece del colore)</p>
-        </div>
-    </div>
-    <div id="statusMessage" class="status-message"></div>
-</div>
-<!-- Scheda Personaggio -->
-<div class="character-section">
-    <h2>📜 La Mia Scheda Personaggio</h2>
-    
-    <!-- Info Base -->
-    <div class="character-header">
-        <div class="character-photo">
-            <img id="characterPhoto" src="" alt="Foto Personaggio">
-            <input type="file" id="photoUpload" accept="image/*" style="display: none;">
-            <button id="uploadPhotoBtn" class="btn btn-small">📸 Carica Foto</button>
-        </div>
-        <div class="character-info">
-            <div class="form-group">
-                <label>Nome Personaggio:</label>
-                <input type="text" id="characterName" placeholder="Come mi chiamo?">
-            </div>
-            <div class="form-group">
-                <label>Motivazione:</label>
-                <input type="text" id="characterMotivation" placeholder="Per cosa sono disposto a rischiare?">
-            </div>
-            <div class="form-group">
-                <label>Archetipo:</label>
-                <input type="text" id="characterArchetype" placeholder="Es: Guerriero, Mago...">
-            </div>
-        </div>
-    </div>
+            <!-- Scheda Personaggio -->
+            <div class="section character-section">
+                <h2>📜 La Mia Scheda Personaggio</h2>
+                
+                <!-- Info Base -->
+                <div class="character-header">
+                    <div class="character-photo">
+                        <img id="characterPhoto" src="" alt="Foto Personaggio">
+                        <input type="file" id="photoUpload" accept="image/*" style="display: none;">
+                        <button id="uploadPhotoBtn" class="btn btn-small">📸 Carica Foto</button>
+                    </div>
+                    <div class="character-info">
+                        <div class="form-group">
+                            <label>Nome Personaggio:</label>
+                            <input type="text" id="characterName" placeholder="Come mi chiamo?">
+                        </div>
+                        <div class="form-group">
+                            <label>Motivazione:</label>
+                            <input type="text" id="characterMotivation" placeholder="Per cosa sono disposto a rischiare?">
+                        </div>
+                        <div class="form-group">
+                            <label>Archetipo:</label>
+                            <input type="text" id="characterArchetype" placeholder="Es: Guerriero, Mago...">
+                        </div>
+                    </div>
+                </div>
 
-<!-- Tratti semplificati a righe -->
-<div class="traits-section">
-    <h3>Tratti (Abilità e Qualità)</h3>
-    <p class="traits-help">
-        🔵 Click su pulsante: ⬡ → ⬢ (+1⚪) → ⬢⭐ (+2⚪) → ⬡<br>
-        L'archetipo può essere selezionato ma non potenziato
-    </p>
-    
-    <!-- Archetipo -->
-    <div class="trait-row">
-        <h4>🔴 Archetipo</h4>
-        <div class="traits-grid">
-            <div class="trait-btn" data-id="archetype" data-type="archetype">
-                <span class="trait-name" contenteditable="true">Archetipo</span>
-                <span class="trait-icon">⬡</span>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Qualità -->
-    <div class="trait-row">
-        <h4>🟢 Qualità (7)</h4>
-        <div class="traits-grid">
-            <div class="trait-btn" data-id="quality1" data-type="quality">
-                <span class="trait-name" contenteditable="true">Qualità 1</span>
-                <span class="trait-icon">⬡</span>
-            </div>
-            <div class="trait-btn" data-id="quality2" data-type="quality">
-                <span class="trait-name" contenteditable="true">Qualità 2</span>
-                <span class="trait-icon">⬡</span>
-            </div>
-            <div class="trait-btn" data-id="quality3" data-type="quality">
-                <span class="trait-name" contenteditable="true">Qualità 3</span>
-                <span class="trait-icon">⬡</span>
-            </div>
-            <div class="trait-btn" data-id="quality4" data-type="quality">
-                <span class="trait-name" contenteditable="true">Qualità 4</span>
-                <span class="trait-icon">⬡</span>
-            </div>
-            <div class="trait-btn" data-id="quality5" data-type="quality">
-                <span class="trait-name" contenteditable="true">Qualità 5</span>
-                <span class="trait-icon">⬡</span>
-            </div>
-            <div class="trait-btn" data-id="quality6" data-type="quality">
-                <span class="trait-name" contenteditable="true">Qualità 6</span>
-                <span class="trait-icon">⬡</span>
-            </div>
-            <div class="trait-btn" data-id="quality7" data-type="quality">
-                <span class="trait-name" contenteditable="true">Qualità 7</span>
-                <span class="trait-icon">⬡</span>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Abilità -->
-    <div class="trait-row">
-        <h4>🔵 Abilità (14)</h4>
-        <div class="traits-grid">
-            <div class="trait-btn" data-id="ability1" data-type="ability">
-                <span class="trait-name" contenteditable="true">Abilità 1</span>
-                <span class="trait-icon">⬡</span>
-            </div>
-            <div class="trait-btn" data-id="ability2" data-type="ability">
-                <span class="trait-name" contenteditable="true">Abilità 2</span>
-                <span class="trait-icon">⬡</span>
-            </div>
-            <div class="trait-btn" data-id="ability3" data-type="ability">
-                <span class="trait-name" contenteditable="true">Abilità 3</span>
-                <span class="trait-icon">⬡</span>
-            </div>
-            <div class="trait-btn" data-id="ability4" data-type="ability">
-                <span class="trait-name" contenteditable="true">Abilità 4</span>
-                <span class="trait-icon">⬡</span>
-            </div>
-            <div class="trait-btn" data-id="ability5" data-type="ability">
-                <span class="trait-name" contenteditable="true">Abilità 5</span>
-                <span class="trait-icon">⬡</span>
-            </div>
-            <div class="trait-btn" data-id="ability6" data-type="ability">
-                <span class="trait-name" contenteditable="true">Abilità 6</span>
-                <span class="trait-icon">⬡</span>
-            </div>
-            <div class="trait-btn" data-id="ability7" data-type="ability">
-                <span class="trait-name" contenteditable="true">Abilità 7</span>
-                <span class="trait-icon">⬡</span>
-            </div>
-            <div class="trait-btn" data-id="ability8" data-type="ability">
-                <span class="trait-name" contenteditable="true">Abilità 8</span>
-                <span class="trait-icon">⬡</span>
-            </div>
-            <div class="trait-btn" data-id="ability9" data-type="ability">
-                <span class="trait-name" contenteditable="true">Abilità 9</span>
-                <span class="trait-icon">⬡</span>
-            </div>
-            <div class="trait-btn" data-id="ability10" data-type="ability">
-                <span class="trait-name" contenteditable="true">Abilità 10</span>
-                <span class="trait-icon">⬡</span>
-            </div>
-            <div class="trait-btn" data-id="ability11" data-type="ability">
-                <span class="trait-name" contenteditable="true">Abilità 11</span>
-                <span class="trait-icon">⬡</span>
-            </div>
-            <div class="trait-btn" data-id="ability12" data-type="ability">
-                <span class="trait-name" contenteditable="true">Abilità 12</span>
-                <span class="trait-icon">⬡</span>
-            </div>
-            <div class="trait-btn" data-id="ability13" data-type="ability">
-                <span class="trait-name" contenteditable="true">Abilità 13</span>
-                <span class="trait-icon">⬡</span>
-            </div>
-            <div class="trait-btn" data-id="ability14" data-type="ability">
-                <span class="trait-name" contenteditable="true">Abilità 14</span>
-                <span class="trait-icon">⬡</span>
-            </div>
-        </div>
-    </div>
-    
-    <div class="traits-summary">
-        <p><strong>Tratti selezionati:</strong> <span id="selectedTraitsCount">0</span> → <strong><span id="traitsWhiteTokens">0</span> ⚪</strong></p>
-        <div class="form-group">
-            <label>Modificatore manuale:</label>
-            <input type="number" id="manualModifier" value="0" min="-10" max="10">
-        </div>
-        <p class="total-whites"><strong>TOTALE BIANCHI: <span id="totalWhiteTokens">0</span> ⚪</strong></p>
-    </div>
-</div>
+                <!-- Tratti semplificati a righe -->
+                <div class="traits-section">
+                    <h3>Tratti (Abilità e Qualità)</h3>
+                    <p class="traits-help">
+                        🔵 Click su nome: <strong>Seleziona</strong> (⬡ → ⬢ → ⬡)<br>
+                        ⭐ Click su stella: <strong>Potenzia/Rimuovi potenziamento</strong><br>
+                        Selezionato = +1⚪ | Selezionato + Potenziato = +2⚪ | Potenziato ma non selezionato = 0⚪
+                    </p>
+                    
+                    <!-- Archetipo -->
+                    <div class="trait-row">
+                        <h4>🔴 Archetipo</h4>
+                        <div class="traits-grid" id="archetypeGrid">
+                            <div class="trait-item">
+                                <div class="trait-btn" data-id="archetype" data-type="archetype">
+                                    <span class="trait-name" contenteditable="true">Archetipo</span>
+                                    <span class="trait-icon">⬡</span>
+                                </div>
+                                <button class="trait-empower-btn" data-id="archetype" title="Potenzia">⭐</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Qualità -->
+                    <div class="trait-row">
+                        <div class="trait-row-header">
+                            <h4>🟢 Qualità (<span id="qualitiesCount">0</span>/6)</h4>
+                            <button class="btn-add-trait btn-small" id="addQualityBtn">+ Aggiungi Qualità</button>
+                        </div>
+                        <div class="traits-grid" id="qualitiesGrid">
+                            <!-- Le qualità verranno aggiunte dinamicamente -->
+                        </div>
+                    </div>
+                    
+                    <!-- Abilità -->
+                    <div class="trait-row">
+                        <div class="trait-row-header">
+                            <h4>🔵 Abilità (<span id="abilitiesCount">0</span>/12)</h4>
+                            <button class="btn-add-trait btn-small" id="addAbilityBtn">+ Aggiungi Abilità</button>
+                        </div>
+                        <div class="traits-grid" id="abilitiesGrid">
+                            <!-- Le abilità verranno aggiunte dinamicamente -->
+                        </div>
+                    </div>
+                    
+                    <div class="traits-summary">
+                        <p><strong>Tratti selezionati:</strong> <span id="selectedTraitsCount">0</span> → <strong><span id="traitsWhiteTokens">0</span> ⚪</strong></p>
+                        <div class="form-group">
+                            <label>Modificatore manuale:</label>
+                            <input type="number" id="manualModifier" value="0" min="-10" max="10">
+                        </div>
+                        <p class="total-whites"><strong>TOTALE BIANCHI: <span id="totalWhiteTokens">0</span> ⚪</strong></p>
+                    </div>
+                </div>
 
-    <!-- Sventure -->
-    <div class="misfortunes-section">
-        <h3>Sventure</h3>
-        <div class="misfortunes-grid">
-            <input type="text" id="misfortune1" placeholder="Sventura 1">
-            <input type="text" id="misfortune2" placeholder="Sventura 2">
-            <input type="text" id="misfortune3" placeholder="Sventura 3">
-            <input type="text" id="misfortune4" placeholder="Sventura 4">
-        </div>
-    </div>
+                <!-- Sventure -->
+                <div class="misfortunes-section">
+                    <h3>Sventure</h3>
+                    <div class="misfortunes-grid">
+                        <input type="text" id="misfortune1" placeholder="Sventura 1">
+                        <input type="text" id="misfortune2" placeholder="Sventura 2">
+                        <input type="text" id="misfortune3" placeholder="Sventura 3">
+                        <input type="text" id="misfortune4" placeholder="Sventura 4">
+                    </div>
+                </div>
 
-    <!-- Stati (sincronizzati con i toggle principali) -->
-    <div class="character-states">
-        <div class="state-indicator" id="charAdrenalineState">
-            ⚡ <strong>Adrenalina:</strong> <span>Non attiva</span>
-        </div>
-        <div class="state-indicator" id="charConfusionState">
-            😵 <strong>Confusione:</strong> <span>Non attiva</span>
-        </div>
-    </div>
+                <!-- Stati (sincronizzati con i toggle principali) -->
+                <div class="character-states">
+                    <div class="state-indicator" id="charAdrenalineState">
+                        ⚡ <strong>Adrenalina:</strong> <span>Non attiva</span>
+                    </div>
+                    <div class="state-indicator" id="charConfusionState">
+                        😵 <strong>Confusione:</strong> <span>Non attiva</span>
+                    </div>
+                </div>
 
-    <!-- Lezioni e Risorse -->
-    <div class="progression-section">
-        <div class="lessons-section">
-            <h3>Lezioni Imparate</h3>
-            <textarea id="lesson1" placeholder="Lezione 1"></textarea>
-            <textarea id="lesson2" placeholder="Lezione 2"></textarea>
-            <textarea id="lesson3" placeholder="Lezione 3"></textarea>
-        </div>
-        
-        <div class="resources-section">
-            <h3>Risorse</h3>
-            <textarea id="resources" placeholder="Di quali risorse dispongo?"></textarea>
-        </div>
-        
-        <div class="notes-section">
-            <h3>Appunti</h3>
-            <textarea id="notes" placeholder="Appunti di gioco..."></textarea>
-        </div>
-    </div>
+                <!-- Lezioni e Risorse -->
+                <div class="progression-section">
+                    <div class="lessons-section">
+                        <h3>Lezioni Imparate</h3>
+                        <textarea id="lesson1" placeholder="Lezione 1"></textarea>
+                        <textarea id="lesson2" placeholder="Lezione 2"></textarea>
+                        <textarea id="lesson3" placeholder="Lezione 3"></textarea>
+                    </div>
+                    
+                    <div class="resources-section">
+                        <h3>Risorse</h3>
+                        <textarea id="resources" placeholder="Di quali risorse dispongo?"></textarea>
+                    </div>
+                    
+                    <div class="notes-section">
+                        <h3>Appunti</h3>
+                        <textarea id="notes" placeholder="Appunti di gioco..."></textarea>
+                    </div>
+                </div>
 
-    <!-- Azioni Scheda -->
-    <div class="character-actions">
-        <button id="saveCharacterBtn" class="btn btn-primary">💾 Salva Scheda</button>
-        <button id="configureFromSheetBtn" class="btn btn-primary">🎲 Configura Sacchetto da Scheda</button>
-        <button id="resetTraitsBtn" class="btn btn-secondary">🔄 Reset Tratti (dopo tiro)</button>
-    </div>
-</div>
+                <!-- Azioni Scheda -->
+                <div class="character-actions">
+                    <button id="saveCharacterBtn" class="btn btn-primary">💾 Salva Scheda</button>
+                    <button id="configureFromSheetBtn" class="btn btn-primary">🎲 Configura Sacchetto da Scheda</button>
+                    <button id="resetTraitsBtn" class="btn btn-secondary">🔄 Reset Tratti (dopo tiro)</button>
+                </div>
+            </div>
 
-<!-- Schede Altri Giocatori -->
-<div class="other-characters-section">
-    <h2>👥 Schede Altri Giocatori</h2>
-    <div id="otherCharactersTabs" class="character-tabs">
-        <!-- Tabs generati dinamicamente -->
-    </div>
-    <div id="otherCharactersContent" class="other-character-view">
-        <p class="no-characters">Nessun altro giocatore con scheda caricata</p>
-    </div>
-</div>
-            <!-- Generatore meteo -->
-            <div class="weather-section">
-                <h2>Generatore Meteo</h2>
+            <!-- Schede Altri Giocatori -->
+            <div class="section other-characters-section">
+                <h2>👥 Schede Altri Giocatori</h2>
+                <div id="otherCharactersTabs" class="character-tabs">
+                    <!-- Tabs generati dinamicamente -->
+                </div>
+                <div id="otherCharactersContent" class="other-character-view">
+                    <p class="no-characters">Nessun altro giocatore con scheda caricata</p>
+                </div>
+            </div>
+
+            <!-- Generatore Meteo -->
+            <div class="section">
+                <h2>🌦️ Generatore Meteo</h2>
                 <div class="weather-controls">
                     <select id="seasonSelect">
-                        <option value="primavera">Primavera</option>
-                        <option value="estate">Estate</option>
-                        <option value="autunno">Autunno</option>
-                        <option value="inverno">Inverno</option>
+                        <option value="Primavera">Primavera</option>
+                        <option value="Estate">Estate</option>
+                        <option value="Autunno">Autunno</option>
+                        <option value="Inverno">Inverno</option>
                     </select>
                     <select id="zoneSelect">
-                        <option value="pianura">Pianura</option>
-                        <option value="collina">Collina</option>
-                        <option value="montagna">Montagna</option>
-                        <option value="costa">Costa</option>
+                        <option value="Pianura">Pianura</option>
+                        <option value="Collina">Collina</option>
+                        <option value="Montagna">Montagna</option>
+                        <option value="Mare">Mare</option>
+                        <option value="Deserto">Deserto</option>
+                        <option value="Foresta">Foresta</option>
                     </select>
                     <button id="generateWeatherBtn" class="btn btn-primary">Genera Meteo</button>
                 </div>
@@ -336,25 +287,25 @@
             </div>
 
             <!-- Storico -->
-            <div class="history-section">
-                <h2>Storico Estrazioni</h2>
+            <div class="section">
+                <h2>📜 Storico Estrazioni</h2>
                 <button id="clearHistoryBtn" class="btn btn-secondary btn-small">Pulisci storico</button>
                 <div id="historyLog" class="history-log"></div>
             </div>
 
             <!-- Utilità -->
-            <div class="utility-section">
-                <button id="resetBagBtn" class="btn btn-danger">Reset Sacchetto</button>
-                <button id="leaveRoomBtn" class="btn btn-secondary">Lascia Stanza</button>
+            <div class="section">
+                <h2>🔧 Utilità</h2>
+                <div class="utility-section">
+                    <button id="resetBagBtn" class="btn btn-danger">Reset Sacchetto</button>
+                </div>
             </div>
         </div>
-
-        <!-- Log azioni -->
-        <div id="actionLog" class="action-log"></div>
     </div>
 
-    <!-- SocketIO -->
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <!-- Log Azioni -->
+    <div id="actionLog" class="action-log"></div>
+
+    <script src="/static/script.js"></script>
 </body>
 </html>

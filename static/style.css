@@ -960,3 +960,240 @@ input:checked + .slider:before {
         grid-template-columns: 1fr;
     }
 }
+/* ========== TRATTI DINAMICI ========== */
+
+.trait-row-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.trait-row-header h4 {
+    margin: 0;
+}
+
+.btn-add-trait {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.btn-add-trait:hover {
+    background: #218838;
+    transform: translateY(-2px);
+}
+
+.btn-add-trait:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.trait-item {
+    display: flex;
+    gap: 5px;
+    align-items: stretch;
+}
+
+.trait-btn {
+    flex: 1;
+}
+
+.trait-empower-btn {
+    width: 40px;
+    background: transparent;
+    border: 2px solid #ffc107;
+    border-radius: 5px;
+    font-size: 1.2em;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.trait-empower-btn:hover {
+    background: #ffc107;
+    transform: scale(1.1);
+}
+
+.trait-empower-btn.active {
+    background: #ffc107;
+    box-shadow: 0 0 10px rgba(255, 193, 7, 0.6);
+    animation: starGlow 1.5s infinite;
+}
+
+@keyframes starGlow {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(255, 193, 7, 0.6);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(255, 193, 7, 0.9);
+    }
+}
+
+.trait-remove-btn {
+    width: 35px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.trait-remove-btn:hover {
+    background: #c82333;
+    transform: scale(1.1);
+}
+
+/* ========== PULSANTE AIUTO ========== */
+
+.btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.btn-success:hover:not(:disabled) {
+    background: #218838;
+}
+
+.btn-success:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.help-status {
+    margin-top: 10px;
+    padding: 10px;
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    border-radius: 5px;
+    color: #155724;
+    font-weight: 600;
+    text-align: center;
+}
+
+.help-status.given {
+    background: #fff3cd;
+    border-color: #ffc107;
+    color: #856404;
+}
+
+/* ========== PULSANTE RISCHIA TUTTO ========== */
+
+#riskAllSection {
+    background: rgba(220, 53, 69, 0.1);
+    padding: 20px;
+    border-radius: 10px;
+    border: 2px dashed #dc3545;
+}
+
+.btn-large {
+    font-size: 1.3em;
+    padding: 15px 30px;
+    animation: pulseRisk 2s infinite;
+}
+
+@keyframes pulseRisk {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 20px 10px rgba(220, 53, 69, 0);
+    }
+}
+
+/* ========== UTILITY ========== */
+
+.hidden {
+    display: none !important;
+}
+
+/* ========== RESPONSIVE ========== */
+
+@media (max-width: 768px) {
+    .trait-item {
+        flex-direction: column;
+    }
+    
+    .trait-empower-btn,
+    .trait-remove-btn {
+        width: 100%;
+        margin-top: 5px;
+    }
+    
+    .trait-row-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+}
+/* Fix dimensione pulsante rimozione */
+.trait-remove-btn {
+    width: 35px;
+    min-width: 35px;
+    height: 35px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 0.9em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.trait-remove-btn:hover {
+    background: #c82333;
+    transform: scale(1.1);
+}
+
+/* Fix layout trait-item */
+.trait-item {
+    display: flex;
+    gap: 5px;
+    align-items: stretch;
+}
+
+.trait-btn {
+    flex: 1;
+    min-width: 0; /* Previene overflow */
+}
+
+.trait-empower-btn {
+    width: 40px;
+    min-width: 40px;
+    flex-shrink: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .trait-item {
+        flex-wrap: wrap;
+    }
+    
+    .trait-empower-btn,
+    .trait-remove-btn {
+        width: 100%;
+        margin-top: 5px;
+    }
+}
