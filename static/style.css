@@ -639,3 +639,324 @@ input:checked + .slider:before {
         width: 100%;
     }
 }
+/* ========== SCHEDA PERSONAGGIO ========== */
+
+.character-section {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 10px;
+    padding: 25px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.character-header {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 20px;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.character-photo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.character-photo img {
+    width: 180px;
+    height: 180px;
+    border-radius: 10px;
+    object-fit: cover;
+    border: 3px solid #2a5298;
+    background: #f0f0f0;
+}
+
+.character-info {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* ========== TRATTI A RIGHE (SEMPLIFICATO) ========== */
+
+.traits-section {
+    margin-bottom: 30px;
+}
+
+.traits-help {
+    background: #e3f2fd;
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 0.9em;
+    color: #1565c0;
+    margin-bottom: 20px;
+}
+
+.trait-row {
+    margin-bottom: 25px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.trait-row h4 {
+    margin-bottom: 15px;
+    color: #2a5298;
+    font-size: 1.1em;
+}
+
+.traits-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+}
+
+.trait-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 15px;
+    background: white;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.trait-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.trait-btn.selected {
+    background: #2a5298;
+    border-color: #1e3c72;
+}
+
+.trait-btn.selected .trait-name,
+.trait-btn.selected .trait-icon {
+    color: white;
+}
+
+.trait-btn.empowered {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: #5a3d8a;
+    box-shadow: 0 0 15px rgba(102, 126, 234, 0.6);
+}
+
+.trait-btn.empowered .trait-name,
+.trait-btn.empowered .trait-icon {
+    color: white;
+}
+
+.trait-btn[data-type="archetype"] {
+    background: #ff6b6b;
+    border-color: #dc3545;
+    font-weight: bold;
+}
+
+.trait-btn[data-type="archetype"] .trait-name,
+.trait-btn[data-type="archetype"] .trait-icon {
+    color: white;
+}
+
+.trait-btn[data-type="archetype"].selected {
+    background: #c82333;
+    border-color: #a71d2a;
+}
+
+.trait-name {
+    flex: 1;
+    font-size: 0.9em;
+    font-weight: 600;
+    outline: none;
+    border: none;
+    background: transparent;
+}
+
+.trait-name:focus {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
+.trait-icon {
+    font-size: 1.5em;
+    margin-left: 10px;
+    user-select: none;
+}
+
+.trait-star {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    font-size: 1.5em;
+    animation: starPulse 1.5s infinite;
+    filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.8));
+}
+
+@keyframes starPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+.traits-summary {
+    background: #e8f5e9;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #4caf50;
+    margin-top: 20px;
+}
+
+.traits-summary p {
+    margin: 5px 0;
+}
+
+.total-whites {
+    font-size: 1.3em;
+    color: #2a5298;
+    margin-top: 10px !important;
+}
+
+/* ========== SVENTURE ========== */
+
+.misfortunes-section {
+    margin-bottom: 20px;
+}
+
+.misfortunes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+}
+
+/* ========== STATI PERSONAGGIO ========== */
+
+.character-states {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.state-indicator {
+    background: #f8f9fa;
+    padding: 12px;
+    border-radius: 8px;
+    border-left: 4px solid #6c757d;
+    font-size: 0.95em;
+}
+
+.state-indicator.active {
+    background: #fff3cd;
+    border-left-color: #ffc107;
+}
+
+.state-indicator strong {
+    color: #2a5298;
+}
+
+/* ========== PROGRESSIONE ========== */
+
+.progression-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.progression-section textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 10px;
+    border: 2px solid #e0e0e0;
+    border-radius: 5px;
+    font-family: inherit;
+    font-size: 0.95em;
+    resize: vertical;
+}
+
+.progression-section textarea:focus {
+    outline: none;
+    border-color: #2a5298;
+}
+
+/* ========== AZIONI SCHEDA ========== */
+
+.character-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding-top: 20px;
+    border-top: 2px solid #e0e0e0;
+}
+
+/* ========== SCHEDE ALTRI GIOCATORI ========== */
+
+.other-characters-section {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 10px;
+    padding: 25px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.character-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.character-tab {
+    padding: 10px 20px;
+    background: #e0e0e0;
+    border: none;
+    border-radius: 5px 5px 0 0;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.character-tab.active {
+    background: #2a5298;
+    color: white;
+}
+
+.character-tab:hover:not(.active) {
+    background: #d0d0d0;
+}
+
+.other-character-view {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 5px;
+    min-height: 200px;
+}
+
+.no-characters {
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+    padding: 40px;
+}
+
+/* ========== RESPONSIVE ========== */
+
+@media (max-width: 768px) {
+    .character-header {
+        grid-template-columns: 1fr;
+    }
+    
+    .hex-grid {
+        transform: scale(0.8);
+    }
+    
+    .progression-section {
+        grid-template-columns: 1fr;
+    }
+}

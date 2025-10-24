@@ -101,7 +101,219 @@
     </div>
     <div id="statusMessage" class="status-message"></div>
 </div>
+<!-- Scheda Personaggio -->
+<div class="character-section">
+    <h2>📜 La Mia Scheda Personaggio</h2>
+    
+    <!-- Info Base -->
+    <div class="character-header">
+        <div class="character-photo">
+            <img id="characterPhoto" src="" alt="Foto Personaggio">
+            <input type="file" id="photoUpload" accept="image/*" style="display: none;">
+            <button id="uploadPhotoBtn" class="btn btn-small">📸 Carica Foto</button>
+        </div>
+        <div class="character-info">
+            <div class="form-group">
+                <label>Nome Personaggio:</label>
+                <input type="text" id="characterName" placeholder="Come mi chiamo?">
+            </div>
+            <div class="form-group">
+                <label>Motivazione:</label>
+                <input type="text" id="characterMotivation" placeholder="Per cosa sono disposto a rischiare?">
+            </div>
+            <div class="form-group">
+                <label>Archetipo:</label>
+                <input type="text" id="characterArchetype" placeholder="Es: Guerriero, Mago...">
+            </div>
+        </div>
+    </div>
 
+<!-- Tratti semplificati a righe -->
+<div class="traits-section">
+    <h3>Tratti (Abilità e Qualità)</h3>
+    <p class="traits-help">
+        🔵 Click su pulsante: ⬡ → ⬢ (+1⚪) → ⬢⭐ (+2⚪) → ⬡<br>
+        L'archetipo può essere selezionato ma non potenziato
+    </p>
+    
+    <!-- Archetipo -->
+    <div class="trait-row">
+        <h4>🔴 Archetipo</h4>
+        <div class="traits-grid">
+            <div class="trait-btn" data-id="archetype" data-type="archetype">
+                <span class="trait-name" contenteditable="true">Archetipo</span>
+                <span class="trait-icon">⬡</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Qualità -->
+    <div class="trait-row">
+        <h4>🟢 Qualità (7)</h4>
+        <div class="traits-grid">
+            <div class="trait-btn" data-id="quality1" data-type="quality">
+                <span class="trait-name" contenteditable="true">Qualità 1</span>
+                <span class="trait-icon">⬡</span>
+            </div>
+            <div class="trait-btn" data-id="quality2" data-type="quality">
+                <span class="trait-name" contenteditable="true">Qualità 2</span>
+                <span class="trait-icon">⬡</span>
+            </div>
+            <div class="trait-btn" data-id="quality3" data-type="quality">
+                <span class="trait-name" contenteditable="true">Qualità 3</span>
+                <span class="trait-icon">⬡</span>
+            </div>
+            <div class="trait-btn" data-id="quality4" data-type="quality">
+                <span class="trait-name" contenteditable="true">Qualità 4</span>
+                <span class="trait-icon">⬡</span>
+            </div>
+            <div class="trait-btn" data-id="quality5" data-type="quality">
+                <span class="trait-name" contenteditable="true">Qualità 5</span>
+                <span class="trait-icon">⬡</span>
+            </div>
+            <div class="trait-btn" data-id="quality6" data-type="quality">
+                <span class="trait-name" contenteditable="true">Qualità 6</span>
+                <span class="trait-icon">⬡</span>
+            </div>
+            <div class="trait-btn" data-id="quality7" data-type="quality">
+                <span class="trait-name" contenteditable="true">Qualità 7</span>
+                <span class="trait-icon">⬡</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Abilità -->
+    <div class="trait-row">
+        <h4>🔵 Abilità (14)</h4>
+        <div class="traits-grid">
+            <div class="trait-btn" data-id="ability1" data-type="ability">
+                <span class="trait-name" contenteditable="true">Abilità 1</span>
+                <span class="trait-icon">⬡</span>
+            </div>
+            <div class="trait-btn" data-id="ability2" data-type="ability">
+                <span class="trait-name" contenteditable="true">Abilità 2</span>
+                <span class="trait-icon">⬡</span>
+            </div>
+            <div class="trait-btn" data-id="ability3" data-type="ability">
+                <span class="trait-name" contenteditable="true">Abilità 3</span>
+                <span class="trait-icon">⬡</span>
+            </div>
+            <div class="trait-btn" data-id="ability4" data-type="ability">
+                <span class="trait-name" contenteditable="true">Abilità 4</span>
+                <span class="trait-icon">⬡</span>
+            </div>
+            <div class="trait-btn" data-id="ability5" data-type="ability">
+                <span class="trait-name" contenteditable="true">Abilità 5</span>
+                <span class="trait-icon">⬡</span>
+            </div>
+            <div class="trait-btn" data-id="ability6" data-type="ability">
+                <span class="trait-name" contenteditable="true">Abilità 6</span>
+                <span class="trait-icon">⬡</span>
+            </div>
+            <div class="trait-btn" data-id="ability7" data-type="ability">
+                <span class="trait-name" contenteditable="true">Abilità 7</span>
+                <span class="trait-icon">⬡</span>
+            </div>
+            <div class="trait-btn" data-id="ability8" data-type="ability">
+                <span class="trait-name" contenteditable="true">Abilità 8</span>
+                <span class="trait-icon">⬡</span>
+            </div>
+            <div class="trait-btn" data-id="ability9" data-type="ability">
+                <span class="trait-name" contenteditable="true">Abilità 9</span>
+                <span class="trait-icon">⬡</span>
+            </div>
+            <div class="trait-btn" data-id="ability10" data-type="ability">
+                <span class="trait-name" contenteditable="true">Abilità 10</span>
+                <span class="trait-icon">⬡</span>
+            </div>
+            <div class="trait-btn" data-id="ability11" data-type="ability">
+                <span class="trait-name" contenteditable="true">Abilità 11</span>
+                <span class="trait-icon">⬡</span>
+            </div>
+            <div class="trait-btn" data-id="ability12" data-type="ability">
+                <span class="trait-name" contenteditable="true">Abilità 12</span>
+                <span class="trait-icon">⬡</span>
+            </div>
+            <div class="trait-btn" data-id="ability13" data-type="ability">
+                <span class="trait-name" contenteditable="true">Abilità 13</span>
+                <span class="trait-icon">⬡</span>
+            </div>
+            <div class="trait-btn" data-id="ability14" data-type="ability">
+                <span class="trait-name" contenteditable="true">Abilità 14</span>
+                <span class="trait-icon">⬡</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="traits-summary">
+        <p><strong>Tratti selezionati:</strong> <span id="selectedTraitsCount">0</span> → <strong><span id="traitsWhiteTokens">0</span> ⚪</strong></p>
+        <div class="form-group">
+            <label>Modificatore manuale:</label>
+            <input type="number" id="manualModifier" value="0" min="-10" max="10">
+        </div>
+        <p class="total-whites"><strong>TOTALE BIANCHI: <span id="totalWhiteTokens">0</span> ⚪</strong></p>
+    </div>
+</div>
+
+    <!-- Sventure -->
+    <div class="misfortunes-section">
+        <h3>Sventure</h3>
+        <div class="misfortunes-grid">
+            <input type="text" id="misfortune1" placeholder="Sventura 1">
+            <input type="text" id="misfortune2" placeholder="Sventura 2">
+            <input type="text" id="misfortune3" placeholder="Sventura 3">
+            <input type="text" id="misfortune4" placeholder="Sventura 4">
+        </div>
+    </div>
+
+    <!-- Stati (sincronizzati con i toggle principali) -->
+    <div class="character-states">
+        <div class="state-indicator" id="charAdrenalineState">
+            ⚡ <strong>Adrenalina:</strong> <span>Non attiva</span>
+        </div>
+        <div class="state-indicator" id="charConfusionState">
+            😵 <strong>Confusione:</strong> <span>Non attiva</span>
+        </div>
+    </div>
+
+    <!-- Lezioni e Risorse -->
+    <div class="progression-section">
+        <div class="lessons-section">
+            <h3>Lezioni Imparate</h3>
+            <textarea id="lesson1" placeholder="Lezione 1"></textarea>
+            <textarea id="lesson2" placeholder="Lezione 2"></textarea>
+            <textarea id="lesson3" placeholder="Lezione 3"></textarea>
+        </div>
+        
+        <div class="resources-section">
+            <h3>Risorse</h3>
+            <textarea id="resources" placeholder="Di quali risorse dispongo?"></textarea>
+        </div>
+        
+        <div class="notes-section">
+            <h3>Appunti</h3>
+            <textarea id="notes" placeholder="Appunti di gioco..."></textarea>
+        </div>
+    </div>
+
+    <!-- Azioni Scheda -->
+    <div class="character-actions">
+        <button id="saveCharacterBtn" class="btn btn-primary">💾 Salva Scheda</button>
+        <button id="configureFromSheetBtn" class="btn btn-primary">🎲 Configura Sacchetto da Scheda</button>
+        <button id="resetTraitsBtn" class="btn btn-secondary">🔄 Reset Tratti (dopo tiro)</button>
+    </div>
+</div>
+
+<!-- Schede Altri Giocatori -->
+<div class="other-characters-section">
+    <h2>👥 Schede Altri Giocatori</h2>
+    <div id="otherCharactersTabs" class="character-tabs">
+        <!-- Tabs generati dinamicamente -->
+    </div>
+    <div id="otherCharactersContent" class="other-character-view">
+        <p class="no-characters">Nessun altro giocatore con scheda caricata</p>
+    </div>
+</div>
             <!-- Generatore meteo -->
             <div class="weather-section">
                 <h2>Generatore Meteo</h2>

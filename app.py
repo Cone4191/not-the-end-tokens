@@ -93,6 +93,19 @@ def handle_join_room(data):
         'player_name': player_name,
         'players': rooms[room_id]['players']
     }, room=room_id)
+    
+    # Carica automaticamente la scheda del giocatore se esiste
+    characters = rooms[room_id].get('characters', {})
+    my_character = characters.get(player_name)
+    
+    emit('my_character_loaded', {
+        'character': my_character
+    })
+    
+    # Invia tutte le schede degli altri giocatori
+    emit('characters_loaded', {
+        'characters': characters
+    })
 
 
 @socketio.on('configure_bag')
@@ -273,7 +286,70 @@ def handle_reset_bag(data):
     
     emit('bag_reset', {}, room=room_id)
 
+@socketio.on('save_character')
+def handle_save_character(data):
+    """Salva la scheda del personaggio"""
+    room_id = data.get('room_id')
+    player_name = data.get('player_name')
+    character = data.get('character')
+    
+    if room_id not in rooms:
+        emit('error', {'message': 'Stanza non trovata'})
+        return
+    
+    # Inizializza dizionario characters se non esiste
+    if 'characters' not in rooms[room_id]:
+        rooms[room_id]['characters'] = {}
+    
+    # Salva la scheda del giocatore
+    rooms[room_id]['characters'][player_name] = character
+    
+    # Notifica tutti nella stanza
+    emit('character_saved', {
+        'player_name': player_name,
+        'character': character
+    }, room=room_id)
+
+
+@socketio.on('get_characters')
+def handle_get_characters(data):
+    """Recupera tutte le schede della stanza"""
+    room_id = data.get('room_id')
+    
+    if room_id not in rooms:
+        emit('error', {'message': 'Stanza non trovata'})
+        return
+    
+    characters = rooms[room_id].get('characters', {})
+    
+    emit('characters_loaded', {
+        'characters': characters
+    })
+
+
+@socketio.on('load_my_character')
+def handle_load_my_character(data):
+    """Carica la scheda del giocatore corrente"""
+    room_id = data.get('room_id')
+    player_name = data.get('player_name')
+    
+    if room_id not in rooms:
+        emit('error', {'message': 'Stanza non trovata'})
+        return
+    
+    characters = rooms[room_id].get('characters', {})
+    character = characters.get(player_name)
+    
+    if character:
+        emit('my_character_loaded', {
+            'character': character
+        })
+    else:
+        emit('my_character_loaded', {
+            'character': None
+        })
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     socketio.run(app, debug=True, host='0.0.0.0', port=port)
+
