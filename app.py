@@ -168,110 +168,128 @@ def handle_add_help(data):
 @socketio.on('draw_tokens')
 def handle_draw_tokens(data):
     """Estrai token dal sacchetto con supporto adrenalina e confusione"""
-    room_id = data.get('room_id')
-    num_tokens = data.get('num_tokens', 1)
-    player_name = data.get('player_name', 'Giocatore')
-    adrenaline = data.get('adrenaline', False)
-    confusion = data.get('confusion', False)
+    try:
+        room_id = data.get('room_id')
+        num_tokens = data.get('num_tokens', 1)
+        player_name = data.get('player_name', 'Giocatore')
+        adrenaline = data.get('adrenaline', False)
+        confusion = data.get('confusion', False)
 
-    print(f"🎲 draw_tokens ricevuto: room={room_id}, tokens={num_tokens}, player={player_name}, adrenaline={adrenaline}, confusion={confusion}")
+        print(f"🎲 draw_tokens ricevuto: room={room_id}, tokens={num_tokens}, player={player_name}, adrenaline={adrenaline}, confusion={confusion}")
 
-    if room_id not in rooms:
-        emit('error', {'message': 'Stanza non trovata'})
+        if room_id not in rooms:
+            emit('error', {'message': 'Stanza non trovata'})
+            return
+    except Exception as e:
+        print(f"❌ Errore in draw_tokens (inizio): {e}")
+        import traceback
+        traceback.print_exc()
+        emit('error', {'message': f'Errore: {str(e)}'})
         return
     
-    bag = rooms[room_id]['bag']
-    
-    # Adrenalina forza 4 token
-    if adrenaline:
-        num_tokens = 4
-    
-    # Verifica che ci siano abbastanza token
-    total_tokens = bag['successi'] + bag['complicazioni']
-    if total_tokens < num_tokens:
-        emit('error', {'message': 'Non ci sono abbastanza token nel sacchetto'})
-        return
-    
-    # ========== GESTIONE CONFUSIONE ==========
-    if confusion:
-        # Con confusione: i token BIANCHI diventano random
-        # I token NERI restano neri
+    try:
+        bag = rooms[room_id]['bag']
 
-        drawn = []
-        temp_bag = {
-            'successi': bag['successi'],
-            'complicazioni': bag['complicazioni']
+        # Adrenalina forza 4 token
+        if adrenaline:
+            num_tokens = 4
+
+        # Verifica che ci siano abbastanza token
+        total_tokens = bag['successi'] + bag['complicazioni']
+        if total_tokens < num_tokens:
+            emit('error', {'message': 'Non ci sono abbastanza token nel sacchetto'})
+            return
+
+        # ========== GESTIONE CONFUSIONE ==========
+        if confusion:
+            # Con confusione: i token BIANCHI diventano random
+            # I token NERI restano neri
+
+            drawn = []
+            temp_bag = {
+                'successi': bag['successi'],
+                'complicazioni': bag['complicazioni']
+            }
+
+            for _ in range(num_tokens):
+                if temp_bag['successi'] + temp_bag['complicazioni'] == 0:
+                    break
+
+                # Estrai un token
+                total = temp_bag['successi'] + temp_bag['complicazioni']
+                rand = random.random()
+
+                if rand < temp_bag['complicazioni'] / total:
+                    # Estratto un NERO (resta nero)
+                    drawn.append('complicazione')
+                    temp_bag['complicazioni'] -= 1
+                    bag['complicazioni'] -= 1
+                else:
+                    # Estratto un BIANCO (diventa RANDOM)
+                    # 50% bianco, 50% nero
+                    if random.random() < 0.5:
+                        drawn.append('successo')
+                    else:
+                        drawn.append('complicazione')
+                    temp_bag['successi'] -= 1
+                    # Aggiorna sacchetto reale: togli sempre il token BIANCO estratto fisicamente
+                    bag['successi'] -= 1
+
+        else:
+            # ========== ESTRAZIONE NORMALE ==========
+            drawn = []
+            for _ in range(num_tokens):
+                if bag['successi'] + bag['complicazioni'] == 0:
+                    break
+
+                # Protezione: assicurati che almeno un peso sia > 0
+                if bag['successi'] <= 0 and bag['complicazioni'] <= 0:
+                    break
+
+                token_type = random.choices(
+                    ['successo', 'complicazione'],
+                    weights=[max(0, bag['successi']), max(0, bag['complicazioni'])]
+                )[0]
+
+                drawn.append(token_type)
+                bag[token_type] -= 1
+
+        # Conta risultati
+        successi = drawn.count('successo')
+        complicazioni = drawn.count('complicazione')
+
+        # Crea entry storico
+        history_entry = {
+            'player': player_name,
+            'drawn': drawn,
+            'successi': successi,
+            'complicazioni': complicazioni,
+            'timestamp': datetime.now().isoformat(),
+            'adrenaline': adrenaline,
+            'confusion': confusion
         }
 
-        for _ in range(num_tokens):
-            if temp_bag['successi'] + temp_bag['complicazioni'] == 0:
-                break
+        rooms[room_id]['history'].append(history_entry)
 
-            # Estrai un token
-            total = temp_bag['successi'] + temp_bag['complicazioni']
-            rand = random.random()
+        # Invia risultato
+        result = {
+            'player': player_name,
+            'drawn': drawn,
+            'successi': successi,
+            'complicazioni': complicazioni,
+            'bag_remaining': bag,
+            'history': history_entry,
+            'adrenaline': adrenaline,
+            'confusion': confusion
+        }
+        print(f"📤 Inviando tokens_drawn: {result}")
+        emit('tokens_drawn', result, room=room_id)
 
-            if rand < temp_bag['complicazioni'] / total:
-                # Estratto un NERO (resta nero)
-                drawn.append('complicazione')
-                temp_bag['complicazioni'] -= 1
-                bag['complicazioni'] -= 1
-            else:
-                # Estratto un BIANCO (diventa RANDOM)
-                # 50% bianco, 50% nero
-                if random.random() < 0.5:
-                    drawn.append('successo')
-                else:
-                    drawn.append('complicazione')
-                temp_bag['successi'] -= 1
-                # Aggiorna sacchetto reale: togli sempre il token BIANCO estratto fisicamente
-                bag['successi'] -= 1
-    
-    else:
-        # ========== ESTRAZIONE NORMALE ==========
-        drawn = []
-        for _ in range(num_tokens):
-            if bag['successi'] + bag['complicazioni'] == 0:
-                break
-            
-            token_type = random.choices(
-                ['successo', 'complicazione'],
-                weights=[bag['successi'], bag['complicazioni']]
-            )[0]
-            
-            drawn.append(token_type)
-            bag[token_type] -= 1
-    
-    # Conta risultati
-    successi = drawn.count('successo')
-    complicazioni = drawn.count('complicazione')
-    
-    # Crea entry storico
-    history_entry = {
-        'player': player_name,
-        'drawn': drawn,
-        'successi': successi,
-        'complicazioni': complicazioni,
-        'timestamp': datetime.now().isoformat(),
-        'adrenaline': adrenaline,
-        'confusion': confusion
-    }
-    
-    rooms[room_id]['history'].append(history_entry)
-
-    # Invia risultato
-    result = {
-        'player': player_name,
-        'drawn': drawn,
-        'successi': successi,
-        'complicazioni': complicazioni,
-        'bag_remaining': bag,
-        'history': history_entry,
-        'adrenaline': adrenaline,
-        'confusion': confusion
-    }
-    print(f"📤 Inviando tokens_drawn: {result}")
-    emit('tokens_drawn', result, room=room_id)
+    except Exception as e:
+        print(f"❌ Errore in draw_tokens: {e}")
+        import traceback
+        traceback.print_exc()
+        emit('error', {'message': f'Errore durante estrazione: {str(e)}'})
 
 @socketio.on('risk_all')
 def handle_risk_all(data):
