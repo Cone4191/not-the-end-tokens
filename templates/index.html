@@ -99,7 +99,7 @@
             <div class="section">
                 <h2>🎲 Estrazione Token</h2>
                 <div class="draw-controls">
-                    <p>Quanti token vuoi estrarre? (Max 5)</p>
+                    <p>Quanti token vuoi estrarre?</p>
                     <div class="draw-buttons">
                         <button class="btn-draw" data-tokens="1">1</button>
                         <button class="btn-draw" data-tokens="2">2</button>
@@ -107,6 +107,9 @@
                         <button class="btn-draw" data-tokens="4">4</button>
                         <button class="btn-draw" data-tokens="5">5</button>
                     </div>
+                    <p id="bagEmptyWarning" class="warning-message hidden" style="color: #dc3545; margin-top: 10px; font-weight: bold;">
+                        ⚠️ Configura prima il sacchetto per estrarre i token!
+                    </p>
                 </div>
                 <div id="drawResult" class="draw-result"></div>
                 

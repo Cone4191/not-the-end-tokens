@@ -53,6 +53,7 @@ const drawButtons = document.querySelectorAll('.btn-draw');
 const drawResult = document.getElementById('drawResult');
 const riskAllSection = document.getElementById('riskAllSection');
 const riskAllBtn = document.getElementById('riskAllBtn');
+const bagEmptyWarning = document.getElementById('bagEmptyWarning');
 
 // Toggle Adrenalina e Confusione
 const adrenalineToggle = document.getElementById('adrenalineToggle');
@@ -286,10 +287,11 @@ socket.on('room_created', (data) => {
     showGameSection();
     currentRoomIdSpan.textContent = data.room_id;
     playersListSpan.textContent = data.player_name;
-    
+
     // Carica le schede
     requestCharactersOnJoin();
-    
+
+    updateDrawButtons(); // Disabilita pulsanti finché il sacchetto non è configurato
     showLog(`Stanza creata: ${data.room_id}`, 'success');
 });
 
@@ -298,22 +300,23 @@ socket.on('room_joined', (data) => {
     showGameSection();
     currentRoomIdSpan.textContent = data.room_id;
     updatePlayersList(data.room_data.players);
-    
+
     // Aggiorna stato sacchetto
     const bag = data.room_data.bag;
     bagSuccessi.textContent = bag.successi;
     bagComplicazioni.textContent = bag.complicazioni;
-    
+
     // Aggiorna storico
     if (data.room_data.history) {
         data.room_data.history.forEach(entry => {
             addHistoryEntry(entry);
         });
     }
-    
+
     // Carica le schede
     requestCharactersOnJoin();
-    
+
+    updateDrawButtons(); // Abilita/disabilita pulsanti in base ai token disponibili
     showLog(`Entrato nella stanza: ${data.room_id}`, 'success');
 });
 
@@ -325,21 +328,23 @@ socket.on('player_joined', (data) => {
 socket.on('bag_configured', (data) => {
     bagSuccessi.textContent = data.successi;
     bagComplicazioni.textContent = data.complicazioni;
+    updateDrawButtons(); // Abilita/disabilita pulsanti in base ai token disponibili
     showLog('Sacchetto configurato', 'success');
 });
 
 socket.on('help_added', (data) => {
     bagSuccessi.textContent = data.bag.successi;
     bagComplicazioni.textContent = data.bag.complicazioni;
-    
+
     // Disabilita pulsante per tutti
     addHelpBtn.disabled = true;
-    
+
     // Mostra chi ha aiutato
     helpStatus.textContent = `💪 ${data.helper} ha aggiunto il suo aiuto (+1⚪)`;
     helpStatus.classList.remove('hidden');
     helpStatus.classList.add('given');
-    
+
+    updateDrawButtons(); // Abilita/disabilita pulsanti in base ai token disponibili
     showLog(`${data.helper} ha aggiunto il suo aiuto!`, 'success');
 });
 
@@ -347,44 +352,44 @@ socket.on('tokens_drawn', (data) => {
     // Aggiorna stato sacchetto
     bagSuccessi.textContent = data.bag_remaining.successi;
     bagComplicazioni.textContent = data.bag_remaining.complicazioni;
-    
+
     // Mostra risultato estrazione
     displayDrawResult(data);
-    
+
     // Aggiungi allo storico
     addHistoryEntry(data.history);
-    
+
     // Mostra pulsante Rischia Tutto se < 5
     if (data.drawn.length < 5 && data.player === currentPlayerName) {
         canRiskAll = true;
         riskAllSection.classList.remove('hidden');
     }
-    
+
     // Suono
     if (data.complicazioni > 0) {
         playSound('complication');
     } else {
         playSound('success');
     }
-    
-    showLog(`${data.player} ha estratto ${data.drawn.length} token`, 'success');
-    
 
+    updateDrawButtons(); // Abilita/disabilita pulsanti in base ai token disponibili
+    showLog(`${data.player} ha estratto ${data.drawn.length} token`, 'success');
 });
 
 socket.on('risk_all_result', (data) => {
     // Aggiorna sacchetto
     bagSuccessi.textContent = data.bag_remaining.successi;
     bagComplicazioni.textContent = data.bag_remaining.complicazioni;
-    
+
     // Aggiungi i nuovi token al display esistente
     appendRiskTokens(data);
-    
+
     // Aggiungi allo storico
     addHistoryEntry(data.history);
-    
+
+    updateDrawButtons(); // Abilita/disabilita pulsanti in base ai token disponibili
     showLog(`⚠️ ${data.player} ha rischiato tutto! +${data.drawn.length} token`, 'success');
-    
+
     // Nascondi pulsante
     riskAllSection.classList.add('hidden');
 });
@@ -401,6 +406,7 @@ socket.on('bag_reset', () => {
     riskAllSection.classList.add('hidden');
     addHelpBtn.classList.add('hidden');
     helpStatus.classList.add('hidden');
+    updateDrawButtons(); // Disabilita tutti i pulsanti quando il sacchetto è vuoto
     showLog('Sacchetto resettato', 'success');
 });
 
@@ -443,22 +449,44 @@ function updatePlayersList(players) {
 }
 
 function updateDrawButtons() {
+    // Leggi il numero di token disponibili nel sacchetto
+    const availableTokens = (parseInt(bagSuccessi.textContent) || 0) + (parseInt(bagComplicazioni.textContent) || 0);
+
+    // Mostra/nascondi messaggio di avviso se il sacchetto è vuoto
+    if (bagEmptyWarning) {
+        if (availableTokens === 0) {
+            bagEmptyWarning.classList.remove('hidden');
+        } else {
+            bagEmptyWarning.classList.add('hidden');
+        }
+    }
+
     drawButtons.forEach(btn => {
         const numTokens = parseInt(btn.dataset.tokens);
-        
+
         if (adrenalineActive) {
             // Con adrenalina attiva, solo il pulsante 4 è abilitato
             if (numTokens === 4) {
-                btn.disabled = false;
+                // Abilita solo se ci sono abbastanza token
+                btn.disabled = availableTokens < 4;
                 btn.classList.add('forced');
             } else {
                 btn.disabled = true;
                 btn.classList.remove('forced');
             }
         } else {
-            // Senza adrenalina, tutti i pulsanti sono abilitati
-            btn.disabled = false;
+            // Senza adrenalina, abilita solo se ci sono abbastanza token
+            btn.disabled = availableTokens < numTokens;
             btn.classList.remove('forced');
+        }
+
+        // Aggiungi tooltip se disabilitato per mancanza di token
+        if (btn.disabled && !adrenalineActive) {
+            btn.title = `Servono almeno ${numTokens} token nel sacchetto`;
+        } else if (btn.disabled && adrenalineActive && numTokens !== 4) {
+            btn.title = 'Adrenalina attiva: devi estrarre 4 token';
+        } else {
+            btn.title = `Estrai ${numTokens} token`;
         }
     });
 }
