@@ -246,13 +246,18 @@ def handle_draw_tokens(data):
                 if bag['successi'] <= 0 and bag['complicazioni'] <= 0:
                     break
 
-                token_type = random.choices(
-                    ['successo', 'complicazione'],
+                # Estrai usando le chiavi PLURALI del dizionario
+                token_key = random.choices(
+                    ['successi', 'complicazioni'],
                     weights=[max(0, bag['successi']), max(0, bag['complicazioni'])]
                 )[0]
 
-                drawn.append(token_type)
-                bag[token_type] -= 1
+                # Aggiungi al risultato usando la forma SINGOLARE
+                token_name = 'successo' if token_key == 'successi' else 'complicazione'
+                drawn.append(token_name)
+
+                # Decrementa usando la chiave PLURALE
+                bag[token_key] -= 1
 
         # Conta risultati
         successi = drawn.count('successo')
@@ -318,13 +323,18 @@ def handle_risk_all(data):
         if bag['successi'] + bag['complicazioni'] == 0:
             break
 
-        token_type = random.choices(
-            ['successo', 'complicazione'],
-            weights=[bag['successi'], bag['complicazioni']]
+        # Estrai usando le chiavi PLURALI del dizionario
+        token_key = random.choices(
+            ['successi', 'complicazioni'],
+            weights=[max(0, bag['successi']), max(0, bag['complicazioni'])]
         )[0]
 
-        drawn.append(token_type)
-        bag[token_type] -= 1
+        # Aggiungi al risultato usando la forma SINGOLARE
+        token_name = 'successo' if token_key == 'successi' else 'complicazione'
+        drawn.append(token_name)
+
+        # Decrementa usando la chiave PLURALE
+        bag[token_key] -= 1
 
     # Conta risultati NUOVI
     new_successi = drawn.count('successo')
