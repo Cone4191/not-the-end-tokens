@@ -173,7 +173,9 @@ def handle_draw_tokens(data):
     player_name = data.get('player_name', 'Giocatore')
     adrenaline = data.get('adrenaline', False)
     confusion = data.get('confusion', False)
-    
+
+    print(f"🎲 draw_tokens ricevuto: room={room_id}, tokens={num_tokens}, player={player_name}, adrenaline={adrenaline}, confusion={confusion}")
+
     if room_id not in rooms:
         emit('error', {'message': 'Stanza non trovata'})
         return
@@ -256,9 +258,9 @@ def handle_draw_tokens(data):
     }
     
     rooms[room_id]['history'].append(history_entry)
-    
+
     # Invia risultato
-    emit('tokens_drawn', {
+    result = {
         'player': player_name,
         'drawn': drawn,
         'successi': successi,
@@ -267,7 +269,9 @@ def handle_draw_tokens(data):
         'history': history_entry,
         'adrenaline': adrenaline,
         'confusion': confusion
-    }, room=room_id)
+    }
+    print(f"📤 Inviando tokens_drawn: {result}")
+    emit('tokens_drawn', result, room=room_id)
 
 @socketio.on('risk_all')
 def handle_risk_all(data):

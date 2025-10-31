@@ -155,6 +155,10 @@ addHelpBtn.addEventListener('click', () => {
 drawButtons.forEach(btn => {
     btn.addEventListener('click', () => {
         const numTokens = parseInt(btn.dataset.tokens);
+        console.log(`🎯 Pulsante ${numTokens} cliccato`);
+        console.log('Stato: room_id:', currentRoomId, 'player:', currentPlayerName);
+        console.log('Adrenalina:', adrenalineActive, 'Confusione:', confusionActive);
+
         socket.emit('draw_tokens', {
             room_id: currentRoomId,
             num_tokens: numTokens,
@@ -163,9 +167,9 @@ drawButtons.forEach(btn => {
             confusion: confusionActive
         });
         playSound('draw');
-        
+
         lastDrawnTokens = adrenalineActive ? 4 : numTokens;
-        
+
         // Reset stati dopo il tiro
         if (adrenalineActive) {
             adrenalineToggle.checked = false;
@@ -349,11 +353,14 @@ socket.on('help_added', (data) => {
 });
 
 socket.on('tokens_drawn', (data) => {
+    console.log('🎲 tokens_drawn ricevuto:', data);
+
     // Aggiorna stato sacchetto
     bagSuccessi.textContent = data.bag_remaining.successi;
     bagComplicazioni.textContent = data.bag_remaining.complicazioni;
 
     // Mostra risultato estrazione
+    console.log('Chiamando displayDrawResult con:', data);
     displayDrawResult(data);
 
     // Aggiungi allo storico
@@ -509,8 +516,11 @@ function updateStatusMessage() {
 }
 
 function displayDrawResult(data) {
+    console.log('📊 displayDrawResult chiamata con:', data);
+    console.log('drawResult element:', drawResult);
+
     const isConfusion = data.confusion || false;
-    
+
     // Prima mostra i token (misteriosi se confusione)
     const tokensHtml = data.drawn.map((token, index) => {
         if (isConfusion) {
@@ -521,8 +531,10 @@ function displayDrawResult(data) {
             return `<div class="token ${className}">${emoji}</div>`;
         }
     }).join('');
-    
-    drawResult.innerHTML = `
+
+    console.log('tokensHtml generato:', tokensHtml);
+
+    const html = `
         <div class="draw-info">
             <strong>${data.player}</strong> ha estratto:
         </div>
@@ -534,7 +546,11 @@ function displayDrawResult(data) {
             <p><strong>Complicazioni:</strong> <span id="complicationCount">${isConfusion ? '?' : data.complicazioni}</span> ⚫</p>
         </div>
     `;
-    
+
+    console.log('Impostando innerHTML su drawResult');
+    drawResult.innerHTML = html;
+    console.log('drawResult.innerHTML dopo set:', drawResult.innerHTML);
+
     // Se confusione, rivela i token dopo 2 secondi
     if (isConfusion) {
         setTimeout(() => {
