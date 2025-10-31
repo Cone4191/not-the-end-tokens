@@ -9,6 +9,9 @@ let currentPlayerName = null;
 let adrenalineActive = false;
 let confusionActive = false;
 
+// Timeout per richieste
+let drawTimeout = null;
+
 // ========== VARIABILI SCHEDA PERSONAGGIO ==========
 let characterSheet = {
     name: '',
@@ -156,6 +159,21 @@ drawButtons.forEach(btn => {
     btn.addEventListener('click', () => {
         const numTokens = parseInt(btn.dataset.tokens);
         console.log(`🎯 Estraendo ${numTokens} token...`);
+        console.log('Socket connesso:', socket.connected);
+        console.log('Room ID:', currentRoomId);
+        console.log('Player:', currentPlayerName);
+
+        if (!socket.connected) {
+            showLog('❌ Errore: Non connesso al server!', 'error');
+            console.error('Socket disconnesso!');
+            return;
+        }
+
+        if (!currentRoomId) {
+            showLog('❌ Errore: Nessuna stanza attiva!', 'error');
+            console.error('currentRoomId è null!');
+            return;
+        }
 
         socket.emit('draw_tokens', {
             room_id: currentRoomId,
@@ -164,6 +182,15 @@ drawButtons.forEach(btn => {
             adrenaline: adrenalineActive,
             confusion: confusionActive
         });
+        console.log('✉️ Richiesta inviata al server');
+
+        // Timeout di 5 secondi per la risposta
+        if (drawTimeout) clearTimeout(drawTimeout);
+        drawTimeout = setTimeout(() => {
+            console.error('⏱️ Timeout: il server non ha risposto dopo 5 secondi');
+            showLog('⏱️ Il server non risponde. Verifica che sia in esecuzione.', 'error');
+        }, 5000);
+
         playSound('draw');
 
         lastDrawnTokens = adrenalineActive ? 4 : numTokens;
@@ -353,6 +380,12 @@ socket.on('help_added', (data) => {
 socket.on('tokens_drawn', (data) => {
     console.log('✅ Tokens ricevuti:', data.drawn);
 
+    // Cancella timeout
+    if (drawTimeout) {
+        clearTimeout(drawTimeout);
+        drawTimeout = null;
+    }
+
     // Aggiorna stato sacchetto
     bagSuccessi.textContent = data.bag_remaining.successi;
     bagComplicazioni.textContent = data.bag_remaining.complicazioni;
@@ -415,7 +448,17 @@ socket.on('bag_reset', () => {
 });
 
 socket.on('error', (data) => {
+    console.error('❌ Errore dal server:', data.message);
     showLog(data.message, 'error');
+});
+
+socket.on('connect', () => {
+    console.log('✅ Socket.IO connesso');
+});
+
+socket.on('disconnect', () => {
+    console.log('❌ Socket.IO disconnesso');
+    showLog('Connessione persa con il server', 'error');
 });
 
 // ========== SOCKET HANDLERS SCHEDE PERSONAGGIO ==========
