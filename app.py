@@ -18,43 +18,37 @@ METEO_DATA = {
         'pianura': ['Soleggiato', 'Nuvoloso', 'Pioggia leggera', 'Ventoso', 'Foschia'],
         'collina': ['Soleggiato', 'Nuvoloso', 'Pioggia', 'Ventoso', 'Nebbia'],
         'montagna': ['Soleggiato', 'Nevicate sparse', 'Nuvoloso', 'Vento forte', 'Nebbia fitta'],
-        'costa': ['Soleggiato', 'Nuvoloso', 'Pioggia', 'Ventoso', 'Foschia marina']
+        'costa': ['Soleggiato', 'Nuvoloso', 'Pioggia', 'Ventoso', 'Foschia marina'],
+        'deserto': ['Soleggiato', 'Caldo secco', 'Vento sabbioso', 'Sereno', 'Tempesta di sabbia'],
+        'foresta': ['Umido', 'Pioggia leggera', 'Nebbia', 'Soleggiato tra gli alberi', 'Ventilato'],
+        'mare': ['Brezza marina', 'Soleggiato', 'Onde moderate', 'Nuvoloso', 'Ventoso']
     },
     'estate': {
         'pianura': ['Soleggiato', 'Caldo torrido', 'Temporale', 'Afa', 'Sereno'],
         'collina': ['Soleggiato', 'Caldo', 'Temporale pomeridiano', 'Ventilato', 'Foschia di calore'],
         'montagna': ['Soleggiato', 'Temporale improvviso', 'Fresco', 'Vento', 'Nebbia mattutina'],
-        'costa': ['Soleggiato', 'Brezza marina', 'Caldo umido', 'Temporale', 'Foschia']
+        'costa': ['Soleggiato', 'Brezza marina', 'Caldo umido', 'Temporale', 'Foschia'],
+        'deserto': ['Caldo torrido', 'Sole cocente', 'Vento caldo', 'Siccità', 'Miraggio'],
+        'foresta': ['Ombreggiato', 'Umidità', 'Temporale', 'Caldo afoso', 'Soleggiato'],
+        'mare': ['Mare calmo', 'Sole e brezza', 'Caldo umido', 'Temporale marino', 'Ventilato']
     },
     'autunno': {
         'pianura': ['Nuvoloso', 'Pioggia', 'Nebbia', 'Ventoso', 'Sereno'],
         'collina': ['Nuvoloso', 'Pioggia persistente', 'Nebbia fitta', 'Vento forte', 'Variabile'],
         'montagna': ['Nuvoloso', 'Pioggia/neve', 'Nebbia', 'Vento gelido', 'Prime nevicate'],
-        'costa': ['Nuvoloso', 'Pioggia', 'Vento forte', 'Mareggiata', 'Foschia']
+        'costa': ['Nuvoloso', 'Pioggia', 'Vento forte', 'Mareggiata', 'Foschia'],
+        'deserto': ['Caldo', 'Ventoso', 'Sereno', 'Tempesta di sabbia', 'Caldo secco'],
+        'foresta': ['Nebbia fitta', 'Pioggia', 'Ventoso', 'Umido', 'Freddo umido'],
+        'mare': ['Mare mosso', 'Vento forte', 'Pioggia', 'Mareggiata', 'Nuvoloso']
     },
     'inverno': {
         'pianura': ['Nebbia', 'Gelido', 'Neve', 'Sereno e freddo', 'Gelo notturno'],
         'collina': ['Neve', 'Gelido', 'Nebbia', 'Vento gelido', 'Ghiaccio'],
         'montagna': ['Tormenta', 'Neve abbondante', 'Gelo estremo', 'Vento glaciale', 'Sereno e gelido'],
-        'costa': ['Freddo pungente', 'Pioggia gelida', 'Vento freddo', 'Neve rara', 'Foschia gelida']
-    },
-        'deserto': {
-        'primavera': ['Soleggiato', 'Caldo secco', 'Vento sabbioso', 'Sereno', 'Tempesta di sabbia'],
-        'estate': ['Caldo torrido', 'Sole cocente', 'Vento caldo', 'Siccità', 'Miraggio'],
-        'autunno': ['Caldo', 'Ventoso', 'Sereno', 'Tempesta di sabbia', 'Caldo secco'],
-        'inverno': ['Freddo secco', 'Soleggiato', 'Freddo notturno', 'Ventoso', 'Gelido']
-    },
-    'foresta': {
-        'primavera': ['Umido', 'Pioggia leggera', 'Nebbia', 'Soleggiato tra gli alberi', 'Ventilato'],
-        'estate': ['Ombreggiato', 'Umidità', 'Temporale', 'Caldo afoso', 'Soleggiato'],
-        'autunno': ['Nebbia fitta', 'Pioggia', 'Ventoso', 'Umido', 'Freddo umido'],
-        'inverno': ['Neve tra gli alberi', 'Gelo', 'Nebbia gelida', 'Freddo umido', 'Ghiaccio']
-    },
-    'mare': {
-        'primavera': ['Brezza marina', 'Soleggiato', 'Onde moderate', 'Nuvoloso', 'Ventoso'],
-        'estate': ['Mare calmo', 'Sole e brezza', 'Caldo umido', 'Temporale marino', 'Ventilato'],
-        'autunno': ['Mare mosso', 'Vento forte', 'Pioggia', 'Mareggiata', 'Nuvoloso'],
-        'inverno': ['Mare agitato', 'Vento gelido', 'Pioggia gelida', 'Mareggiate', 'Nebbia marina']
+        'costa': ['Freddo pungente', 'Pioggia gelida', 'Vento freddo', 'Neve rara', 'Foschia gelida'],
+        'deserto': ['Freddo secco', 'Soleggiato', 'Freddo notturno', 'Ventoso', 'Gelido'],
+        'foresta': ['Neve tra gli alberi', 'Gelo', 'Nebbia gelida', 'Freddo umido', 'Ghiaccio'],
+        'mare': ['Mare agitato', 'Vento gelido', 'Pioggia gelida', 'Mareggiate', 'Nebbia marina']
     }
 }
 
@@ -89,15 +83,20 @@ def handle_join_room(data):
     """Unisciti a una stanza esistente"""
     room_id = data.get('room_id')
     player_name = data.get('player_name', 'Giocatore')
-    
+
     if room_id not in rooms:
         emit('error', {'message': 'Stanza non trovata'})
         return
-    
+
     if len(rooms[room_id]['players']) >= 10:
         emit('error', {'message': 'Stanza piena (max 10 giocatori)'})
         return
-    
+
+    # Controlla se il giocatore è già nella stanza
+    if player_name in rooms[room_id]['players']:
+        emit('error', {'message': f'Nome "{player_name}" già in uso in questa stanza'})
+        return
+
     join_room(room_id)
     rooms[room_id]['players'].append(player_name)
     
@@ -169,109 +168,133 @@ def handle_add_help(data):
 @socketio.on('draw_tokens')
 def handle_draw_tokens(data):
     """Estrai token dal sacchetto con supporto adrenalina e confusione"""
-    room_id = data.get('room_id')
-    num_tokens = data.get('num_tokens', 1)
-    player_name = data.get('player_name', 'Giocatore')
-    adrenaline = data.get('adrenaline', False)
-    confusion = data.get('confusion', False)
-    
-    if room_id not in rooms:
-        emit('error', {'message': 'Stanza non trovata'})
+    try:
+        room_id = data.get('room_id')
+        num_tokens = data.get('num_tokens', 1)
+        player_name = data.get('player_name', 'Giocatore')
+        adrenaline = data.get('adrenaline', False)
+        confusion = data.get('confusion', False)
+
+        print(f"🎲 draw_tokens ricevuto: room={room_id}, tokens={num_tokens}, player={player_name}, adrenaline={adrenaline}, confusion={confusion}")
+
+        if room_id not in rooms:
+            emit('error', {'message': 'Stanza non trovata'})
+            return
+    except Exception as e:
+        print(f"❌ Errore in draw_tokens (inizio): {e}")
+        import traceback
+        traceback.print_exc()
+        emit('error', {'message': f'Errore: {str(e)}'})
         return
     
-    bag = rooms[room_id]['bag']
-    
-    # Adrenalina forza 4 token
-    if adrenaline:
-        num_tokens = 4
-    
-    # Verifica che ci siano abbastanza token
-    total_tokens = bag['successi'] + bag['complicazioni']
-    if total_tokens < num_tokens:
-        emit('error', {'message': 'Non ci sono abbastanza token nel sacchetto'})
-        return
-    
-    # ========== GESTIONE CONFUSIONE ==========
-    if confusion:
-        # Con confusione: i token BIANCHI diventano random
-        # I token NERI restano neri
-        
-        drawn = []
-        temp_bag = {
-            'successi': bag['successi'],
-            'complicazioni': bag['complicazioni']
-        }
-        
-        for _ in range(num_tokens):
-            if temp_bag['successi'] + temp_bag['complicazioni'] == 0:
-                break
-            
-            # Estrai un token
-            total = temp_bag['successi'] + temp_bag['complicazioni']
-            rand = random.random()
-            
-            if rand < temp_bag['complicazioni'] / total:
-                # Estratto un NERO (resta nero)
-                drawn.append('complicazione')
-                temp_bag['complicazioni'] -= 1
-            else:
-                # Estratto un BIANCO (diventa RANDOM)
-                # 50% bianco, 50% nero
-                if random.random() < 0.5:
-                    drawn.append('successo')
-                else:
+    try:
+        bag = rooms[room_id]['bag']
+
+        # Adrenalina forza 4 token
+        if adrenaline:
+            num_tokens = 4
+
+        # Verifica che ci siano abbastanza token
+        total_tokens = bag['successi'] + bag['complicazioni']
+        if total_tokens < num_tokens:
+            emit('error', {'message': 'Non ci sono abbastanza token nel sacchetto'})
+            return
+
+        # ========== GESTIONE CONFUSIONE ==========
+        if confusion:
+            # Con confusione: i token BIANCHI diventano random
+            # I token NERI restano neri
+
+            drawn = []
+            temp_bag = {
+                'successi': bag['successi'],
+                'complicazioni': bag['complicazioni']
+            }
+
+            for _ in range(num_tokens):
+                if temp_bag['successi'] + temp_bag['complicazioni'] == 0:
+                    break
+
+                # Estrai un token
+                total = temp_bag['successi'] + temp_bag['complicazioni']
+                rand = random.random()
+
+                if rand < temp_bag['complicazioni'] / total:
+                    # Estratto un NERO (resta nero)
                     drawn.append('complicazione')
-                temp_bag['successi'] -= 1
-            
-            # Aggiorna sacchetto reale
-            if drawn[-1] == 'successo':
-                bag['successi'] -= 1
-            else:
-                bag['complicazioni'] -= 1
-    
-    else:
-        # ========== ESTRAZIONE NORMALE ==========
-        drawn = []
-        for _ in range(num_tokens):
-            if bag['successi'] + bag['complicazioni'] == 0:
-                break
-            
-            token_type = random.choices(
-                ['successo', 'complicazione'],
-                weights=[bag['successi'], bag['complicazioni']]
-            )[0]
-            
-            drawn.append(token_type)
-            bag[token_type] -= 1
-    
-    # Conta risultati
-    successi = drawn.count('successo')
-    complicazioni = drawn.count('complicazione')
-    
-    # Crea entry storico
-    history_entry = {
-        'player': player_name,
-        'drawn': drawn,
-        'successi': successi,
-        'complicazioni': complicazioni,
-        'timestamp': datetime.now().isoformat(),
-        'adrenaline': adrenaline,
-        'confusion': confusion
-    }
-    
-    rooms[room_id]['history'].append(history_entry)
-    
-    # Invia risultato
-    emit('tokens_drawn', {
-        'player': player_name,
-        'drawn': drawn,
-        'successi': successi,
-        'complicazioni': complicazioni,
-        'bag_remaining': bag,
-        'history': history_entry,
-        'adrenaline': adrenaline,
-        'confusion': confusion
-    }, room=room_id)
+                    temp_bag['complicazioni'] -= 1
+                    bag['complicazioni'] -= 1
+                else:
+                    # Estratto un BIANCO (diventa RANDOM)
+                    # 50% bianco, 50% nero
+                    if random.random() < 0.5:
+                        drawn.append('successo')
+                    else:
+                        drawn.append('complicazione')
+                    temp_bag['successi'] -= 1
+                    # Aggiorna sacchetto reale: togli sempre il token BIANCO estratto fisicamente
+                    bag['successi'] -= 1
+
+        else:
+            # ========== ESTRAZIONE NORMALE ==========
+            drawn = []
+            for _ in range(num_tokens):
+                if bag['successi'] + bag['complicazioni'] == 0:
+                    break
+
+                # Protezione: assicurati che almeno un peso sia > 0
+                if bag['successi'] <= 0 and bag['complicazioni'] <= 0:
+                    break
+
+                # Estrai usando le chiavi PLURALI del dizionario
+                token_key = random.choices(
+                    ['successi', 'complicazioni'],
+                    weights=[max(0, bag['successi']), max(0, bag['complicazioni'])]
+                )[0]
+
+                # Aggiungi al risultato usando la forma SINGOLARE
+                token_name = 'successo' if token_key == 'successi' else 'complicazione'
+                drawn.append(token_name)
+
+                # Decrementa usando la chiave PLURALE
+                bag[token_key] -= 1
+
+        # Conta risultati
+        successi = drawn.count('successo')
+        complicazioni = drawn.count('complicazione')
+
+        # Crea entry storico
+        history_entry = {
+            'player': player_name,
+            'drawn': drawn,
+            'successi': successi,
+            'complicazioni': complicazioni,
+            'timestamp': datetime.now().isoformat(),
+            'adrenaline': adrenaline,
+            'confusion': confusion
+        }
+
+        rooms[room_id]['history'].append(history_entry)
+
+        # Invia risultato
+        result = {
+            'player': player_name,
+            'drawn': drawn,
+            'successi': successi,
+            'complicazioni': complicazioni,
+            'bag_remaining': bag,
+            'history': history_entry,
+            'adrenaline': adrenaline,
+            'confusion': confusion
+        }
+        print(f"📤 Inviando tokens_drawn: {result}")
+        emit('tokens_drawn', result, room=room_id)
+
+    except Exception as e:
+        print(f"❌ Errore in draw_tokens: {e}")
+        import traceback
+        traceback.print_exc()
+        emit('error', {'message': f'Errore durante estrazione: {str(e)}'})
 
 @socketio.on('risk_all')
 def handle_risk_all(data):
@@ -281,8 +304,38 @@ def handle_risk_all(data):
     player_name = data.get('player_name', 'Giocatore')
     previous_successi = data.get('previous_successi', 0)
     previous_complicazioni = data.get('previous_complicazioni', 0)
-    # ... codice estrazione ...
-    
+
+    if room_id not in rooms:
+        emit('error', {'message': 'Stanza non trovata'})
+        return
+
+    bag = rooms[room_id]['bag']
+
+    # Verifica che ci siano abbastanza token
+    total_tokens = bag['successi'] + bag['complicazioni']
+    if total_tokens < num_tokens:
+        emit('error', {'message': 'Non ci sono abbastanza token nel sacchetto'})
+        return
+
+    # Estrazione normale (niente adrenalina/confusione per risk_all)
+    drawn = []
+    for _ in range(num_tokens):
+        if bag['successi'] + bag['complicazioni'] == 0:
+            break
+
+        # Estrai usando le chiavi PLURALI del dizionario
+        token_key = random.choices(
+            ['successi', 'complicazioni'],
+            weights=[max(0, bag['successi']), max(0, bag['complicazioni'])]
+        )[0]
+
+        # Aggiungi al risultato usando la forma SINGOLARE
+        token_name = 'successo' if token_key == 'successi' else 'complicazione'
+        drawn.append(token_name)
+
+        # Decrementa usando la chiave PLURALE
+        bag[token_key] -= 1
+
     # Conta risultati NUOVI
     new_successi = drawn.count('successo')
     new_complicazioni = drawn.count('complicazione')

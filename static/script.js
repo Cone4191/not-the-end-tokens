@@ -9,6 +9,9 @@ let currentPlayerName = null;
 let adrenalineActive = false;
 let confusionActive = false;
 
+// Timeout per richieste
+let drawTimeout = null;
+
 // ========== VARIABILI SCHEDA PERSONAGGIO ==========
 let characterSheet = {
     name: '',
@@ -53,6 +56,7 @@ const drawButtons = document.querySelectorAll('.btn-draw');
 const drawResult = document.getElementById('drawResult');
 const riskAllSection = document.getElementById('riskAllSection');
 const riskAllBtn = document.getElementById('riskAllBtn');
+const bagEmptyWarning = document.getElementById('bagEmptyWarning');
 
 // Toggle Adrenalina e Confusione
 const adrenalineToggle = document.getElementById('adrenalineToggle');
@@ -73,10 +77,6 @@ const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 const resetBagBtn = document.getElementById('resetBagBtn');
 const leaveRoomBtn = document.getElementById('leaveRoomBtn');
 const actionLog = document.getElementById('actionLog');
-
-// Recupera i totali attuali dal display
-const currentSuccessi = parseInt(document.getElementById('successCount').textContent) || 0;
-const currentComplicazioni = parseInt(document.getElementById('complicationCount').textContent) || 0;
 
 // === Event Listeners ===
 
@@ -158,6 +158,23 @@ addHelpBtn.addEventListener('click', () => {
 drawButtons.forEach(btn => {
     btn.addEventListener('click', () => {
         const numTokens = parseInt(btn.dataset.tokens);
+        console.log(`🎯 Estraendo ${numTokens} token...`);
+        console.log('Socket connesso:', socket.connected);
+        console.log('Room ID:', currentRoomId);
+        console.log('Player:', currentPlayerName);
+
+        if (!socket.connected) {
+            showLog('❌ Errore: Non connesso al server!', 'error');
+            console.error('Socket disconnesso!');
+            return;
+        }
+
+        if (!currentRoomId) {
+            showLog('❌ Errore: Nessuna stanza attiva!', 'error');
+            console.error('currentRoomId è null!');
+            return;
+        }
+
         socket.emit('draw_tokens', {
             room_id: currentRoomId,
             num_tokens: numTokens,
@@ -165,10 +182,19 @@ drawButtons.forEach(btn => {
             adrenaline: adrenalineActive,
             confusion: confusionActive
         });
+        console.log('✉️ Richiesta inviata al server');
+
+        // Timeout di 5 secondi per la risposta
+        if (drawTimeout) clearTimeout(drawTimeout);
+        drawTimeout = setTimeout(() => {
+            console.error('⏱️ Timeout: il server non ha risposto dopo 5 secondi');
+            showLog('⏱️ Il server non risponde. Verifica che sia in esecuzione.', 'error');
+        }, 5000);
+
         playSound('draw');
-        
+
         lastDrawnTokens = adrenalineActive ? 4 : numTokens;
-        
+
         // Reset stati dopo il tiro
         if (adrenalineActive) {
             adrenalineToggle.checked = false;
@@ -187,27 +213,30 @@ drawButtons.forEach(btn => {
 // Pulsante Rischia Tutto
 riskAllBtn.addEventListener('click', () => {
     if (!canRiskAll) return;
-    
+
     const tokensToRisk = 5 - lastDrawnTokens;
-    
+
     if (tokensToRisk <= 0) {
         showLog('❌ Hai già estratto 5 token!', 'error');
         return;
     }
-    
+
     if (!confirm(`⚠️ Vuoi rischiare tutto ed estrarre altri ${tokensToRisk} token?`)) {
         return;
     }
-    
+
+    // Leggi i valori correnti dal display
+    const currentSuccessi = parseInt(document.getElementById('successCount').textContent) || 0;
+    const currentComplicazioni = parseInt(document.getElementById('complicationCount').textContent) || 0;
+
     socket.emit('risk_all', {
-    room_id: currentRoomId,
-    num_tokens: tokensToRisk,
-    player_name: currentPlayerName,
-    previous_successi: currentSuccessi,
-    previous_complicazioni: currentComplicazioni
-    
+        room_id: currentRoomId,
+        num_tokens: tokensToRisk,
+        player_name: currentPlayerName,
+        previous_successi: currentSuccessi,
+        previous_complicazioni: currentComplicazioni
     });
-    
+
     canRiskAll = false;
     riskAllSection.classList.add('hidden');
 });
@@ -287,10 +316,11 @@ socket.on('room_created', (data) => {
     showGameSection();
     currentRoomIdSpan.textContent = data.room_id;
     playersListSpan.textContent = data.player_name;
-    
+
     // Carica le schede
     requestCharactersOnJoin();
-    
+
+    updateDrawButtons(); // Disabilita pulsanti finché il sacchetto non è configurato
     showLog(`Stanza creata: ${data.room_id}`, 'success');
 });
 
@@ -299,22 +329,23 @@ socket.on('room_joined', (data) => {
     showGameSection();
     currentRoomIdSpan.textContent = data.room_id;
     updatePlayersList(data.room_data.players);
-    
+
     // Aggiorna stato sacchetto
     const bag = data.room_data.bag;
     bagSuccessi.textContent = bag.successi;
     bagComplicazioni.textContent = bag.complicazioni;
-    
+
     // Aggiorna storico
     if (data.room_data.history) {
         data.room_data.history.forEach(entry => {
             addHistoryEntry(entry);
         });
     }
-    
+
     // Carica le schede
     requestCharactersOnJoin();
-    
+
+    updateDrawButtons(); // Abilita/disabilita pulsanti in base ai token disponibili
     showLog(`Entrato nella stanza: ${data.room_id}`, 'success');
 });
 
@@ -326,66 +357,76 @@ socket.on('player_joined', (data) => {
 socket.on('bag_configured', (data) => {
     bagSuccessi.textContent = data.successi;
     bagComplicazioni.textContent = data.complicazioni;
+    updateDrawButtons(); // Abilita/disabilita pulsanti in base ai token disponibili
     showLog('Sacchetto configurato', 'success');
 });
 
 socket.on('help_added', (data) => {
     bagSuccessi.textContent = data.bag.successi;
     bagComplicazioni.textContent = data.bag.complicazioni;
-    
+
     // Disabilita pulsante per tutti
     addHelpBtn.disabled = true;
-    
+
     // Mostra chi ha aiutato
     helpStatus.textContent = `💪 ${data.helper} ha aggiunto il suo aiuto (+1⚪)`;
     helpStatus.classList.remove('hidden');
     helpStatus.classList.add('given');
-    
+
+    updateDrawButtons(); // Abilita/disabilita pulsanti in base ai token disponibili
     showLog(`${data.helper} ha aggiunto il suo aiuto!`, 'success');
 });
 
 socket.on('tokens_drawn', (data) => {
+    console.log('✅ Tokens ricevuti:', data.drawn);
+
+    // Cancella timeout
+    if (drawTimeout) {
+        clearTimeout(drawTimeout);
+        drawTimeout = null;
+    }
+
     // Aggiorna stato sacchetto
     bagSuccessi.textContent = data.bag_remaining.successi;
     bagComplicazioni.textContent = data.bag_remaining.complicazioni;
-    
+
     // Mostra risultato estrazione
     displayDrawResult(data);
-    
+
     // Aggiungi allo storico
     addHistoryEntry(data.history);
-    
+
     // Mostra pulsante Rischia Tutto se < 5
     if (data.drawn.length < 5 && data.player === currentPlayerName) {
         canRiskAll = true;
         riskAllSection.classList.remove('hidden');
     }
-    
+
     // Suono
     if (data.complicazioni > 0) {
         playSound('complication');
     } else {
         playSound('success');
     }
-    
-    showLog(`${data.player} ha estratto ${data.drawn.length} token`, 'success');
-    
 
+    updateDrawButtons(); // Abilita/disabilita pulsanti in base ai token disponibili
+    showLog(`${data.player} ha estratto ${data.drawn.length} token`, 'success');
 });
 
 socket.on('risk_all_result', (data) => {
     // Aggiorna sacchetto
     bagSuccessi.textContent = data.bag_remaining.successi;
     bagComplicazioni.textContent = data.bag_remaining.complicazioni;
-    
+
     // Aggiungi i nuovi token al display esistente
     appendRiskTokens(data);
-    
+
     // Aggiungi allo storico
     addHistoryEntry(data.history);
-    
+
+    updateDrawButtons(); // Abilita/disabilita pulsanti in base ai token disponibili
     showLog(`⚠️ ${data.player} ha rischiato tutto! +${data.drawn.length} token`, 'success');
-    
+
     // Nascondi pulsante
     riskAllSection.classList.add('hidden');
 });
@@ -402,11 +443,22 @@ socket.on('bag_reset', () => {
     riskAllSection.classList.add('hidden');
     addHelpBtn.classList.add('hidden');
     helpStatus.classList.add('hidden');
+    updateDrawButtons(); // Disabilita tutti i pulsanti quando il sacchetto è vuoto
     showLog('Sacchetto resettato', 'success');
 });
 
 socket.on('error', (data) => {
+    console.error('❌ Errore dal server:', data.message);
     showLog(data.message, 'error');
+});
+
+socket.on('connect', () => {
+    console.log('✅ Socket.IO connesso');
+});
+
+socket.on('disconnect', () => {
+    console.log('❌ Socket.IO disconnesso');
+    showLog('Connessione persa con il server', 'error');
 });
 
 // ========== SOCKET HANDLERS SCHEDE PERSONAGGIO ==========
@@ -444,22 +496,44 @@ function updatePlayersList(players) {
 }
 
 function updateDrawButtons() {
+    // Leggi il numero di token disponibili nel sacchetto
+    const availableTokens = (parseInt(bagSuccessi.textContent) || 0) + (parseInt(bagComplicazioni.textContent) || 0);
+
+    // Mostra/nascondi messaggio di avviso se il sacchetto è vuoto
+    if (bagEmptyWarning) {
+        if (availableTokens === 0) {
+            bagEmptyWarning.classList.remove('hidden');
+        } else {
+            bagEmptyWarning.classList.add('hidden');
+        }
+    }
+
     drawButtons.forEach(btn => {
         const numTokens = parseInt(btn.dataset.tokens);
-        
+
         if (adrenalineActive) {
             // Con adrenalina attiva, solo il pulsante 4 è abilitato
             if (numTokens === 4) {
-                btn.disabled = false;
+                // Abilita solo se ci sono abbastanza token
+                btn.disabled = availableTokens < 4;
                 btn.classList.add('forced');
             } else {
                 btn.disabled = true;
                 btn.classList.remove('forced');
             }
         } else {
-            // Senza adrenalina, tutti i pulsanti sono abilitati
-            btn.disabled = false;
+            // Senza adrenalina, abilita solo se ci sono abbastanza token
+            btn.disabled = availableTokens < numTokens;
             btn.classList.remove('forced');
+        }
+
+        // Aggiungi tooltip se disabilitato per mancanza di token
+        if (btn.disabled && !adrenalineActive) {
+            btn.title = `Servono almeno ${numTokens} token nel sacchetto`;
+        } else if (btn.disabled && adrenalineActive && numTokens !== 4) {
+            btn.title = 'Adrenalina attiva: devi estrarre 4 token';
+        } else {
+            btn.title = `Estrai ${numTokens} token`;
         }
     });
 }
@@ -482,8 +556,10 @@ function updateStatusMessage() {
 }
 
 function displayDrawResult(data) {
+    console.log('📊 Visualizzando risultato...');
+
     const isConfusion = data.confusion || false;
-    
+
     // Prima mostra i token (misteriosi se confusione)
     const tokensHtml = data.drawn.map((token, index) => {
         if (isConfusion) {
@@ -494,8 +570,8 @@ function displayDrawResult(data) {
             return `<div class="token ${className}">${emoji}</div>`;
         }
     }).join('');
-    
-    drawResult.innerHTML = `
+
+    const html = `
         <div class="draw-info">
             <strong>${data.player}</strong> ha estratto:
         </div>
@@ -507,7 +583,10 @@ function displayDrawResult(data) {
             <p><strong>Complicazioni:</strong> <span id="complicationCount">${isConfusion ? '?' : data.complicazioni}</span> ⚫</p>
         </div>
     `;
-    
+
+    drawResult.innerHTML = html;
+    console.log('✅ Risultato visualizzato:', data.successi + '⚪', data.complicazioni + '⚫');
+
     // Se confusione, rivela i token dopo 2 secondi
     if (isConfusion) {
         setTimeout(() => {
