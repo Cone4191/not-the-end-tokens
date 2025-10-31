@@ -74,10 +74,6 @@ const resetBagBtn = document.getElementById('resetBagBtn');
 const leaveRoomBtn = document.getElementById('leaveRoomBtn');
 const actionLog = document.getElementById('actionLog');
 
-// Recupera i totali attuali dal display
-const currentSuccessi = parseInt(document.getElementById('successCount').textContent) || 0;
-const currentComplicazioni = parseInt(document.getElementById('complicationCount').textContent) || 0;
-
 // === Event Listeners ===
 
 // Toggle Adrenalina
@@ -187,27 +183,30 @@ drawButtons.forEach(btn => {
 // Pulsante Rischia Tutto
 riskAllBtn.addEventListener('click', () => {
     if (!canRiskAll) return;
-    
+
     const tokensToRisk = 5 - lastDrawnTokens;
-    
+
     if (tokensToRisk <= 0) {
         showLog('❌ Hai già estratto 5 token!', 'error');
         return;
     }
-    
+
     if (!confirm(`⚠️ Vuoi rischiare tutto ed estrarre altri ${tokensToRisk} token?`)) {
         return;
     }
-    
+
+    // Leggi i valori correnti dal display
+    const currentSuccessi = parseInt(document.getElementById('successCount').textContent) || 0;
+    const currentComplicazioni = parseInt(document.getElementById('complicationCount').textContent) || 0;
+
     socket.emit('risk_all', {
-    room_id: currentRoomId,
-    num_tokens: tokensToRisk,
-    player_name: currentPlayerName,
-    previous_successi: currentSuccessi,
-    previous_complicazioni: currentComplicazioni
-    
+        room_id: currentRoomId,
+        num_tokens: tokensToRisk,
+        player_name: currentPlayerName,
+        previous_successi: currentSuccessi,
+        previous_complicazioni: currentComplicazioni
     });
-    
+
     canRiskAll = false;
     riskAllSection.classList.add('hidden');
 });
