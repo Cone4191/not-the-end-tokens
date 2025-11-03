@@ -16,10 +16,12 @@ if DATABASE_URL:
     if DATABASE_URL.startswith('postgres://'):
         DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+    print(f"🗄️  Using PostgreSQL database")
 else:
     # Fallback a SQLite per sviluppo locale
     # Usa check_same_thread=False per permettere l'uso multi-threaded con eventlet
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///not_the_end.db?check_same_thread=False'
+    print(f"⚠️  DATABASE_URL not found - using SQLite (development only)")
     # Configurazione pool per SQLite
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
         'pool_pre_ping': True,
