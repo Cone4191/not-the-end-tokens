@@ -667,7 +667,7 @@ function displayOwnedRooms(rooms) {
     ownedRoomsList.innerHTML = rooms.map(room => {
         const createdDate = new Date(room.created_at).toLocaleString('it-IT');
         return `
-            <div class="room-card" onclick="enterRoom('${room.id}')">
+            <div class="room-card" onclick="enterRoom('${room.id}', '${room.my_player_name || ''}')">
                 <div class="room-card-header">
                     <span class="room-id">🎲 ${room.id}</span>
                     <span class="room-owner-badge">TUA</span>
@@ -692,7 +692,7 @@ function displaySharedRooms(rooms) {
     sharedRoomsList.innerHTML = rooms.map(room => {
         const createdDate = new Date(room.created_at).toLocaleString('it-IT');
         return `
-            <div class="room-card" onclick="enterRoom('${room.id}')">
+            <div class="room-card" onclick="enterRoom('${room.id}', '${room.my_player_name || ''}')">
                 <div class="room-card-header">
                     <span class="room-id">🎲 ${room.id}</span>
                     <span class="room-shared-badge">CONDIVISA</span>
@@ -708,19 +708,30 @@ function displaySharedRooms(rooms) {
     }).join('');
 }
 
-function enterRoom(roomId) {
-    const playerName = prompt('Inserisci il tuo nome per questa stanza:');
-    if (!playerName || !playerName.trim()) {
-        showLog('Nome non valido', 'error');
-        return;
-    }
+function enterRoom(roomId, savedPlayerName) {
+    // Se abbiamo già un nome salvato per questa stanza, usalo
+    if (savedPlayerName && savedPlayerName.trim()) {
+        currentPlayerName = savedPlayerName.trim();
+        socket.emit('join_room', {
+            player_name: currentPlayerName,
+            room_id: roomId,
+            user_id: currentUserId
+        });
+    } else {
+        // Altrimenti chiedi il nome
+        const playerName = prompt('Inserisci il tuo nome per questa stanza:');
+        if (!playerName || !playerName.trim()) {
+            showLog('Nome non valido', 'error');
+            return;
+        }
 
-    currentPlayerName = playerName.trim();
-    socket.emit('join_room', {
-        player_name: currentPlayerName,
-        room_id: roomId,
-        user_id: currentUserId
-    });
+        currentPlayerName = playerName.trim();
+        socket.emit('join_room', {
+            player_name: currentPlayerName,
+            room_id: roomId,
+            user_id: currentUserId
+        });
+    }
 }
 
 function updatePlayersList(players) {

@@ -126,18 +126,24 @@ def handle_login(data):
     # Prepara dettagli stanze
     owned_rooms_details = []
     for room in owned_rooms:
+        # Trova il nome del giocatore in questa stanza
+        my_player = room.players.filter_by(user_id=user.id).first()
         owned_rooms_details.append({
             'id': room.room_id,
             'players': [p.player_name for p in room.players.all()],
-            'created_at': room.created_at.isoformat()
+            'created_at': room.created_at.isoformat(),
+            'my_player_name': my_player.player_name if my_player else None
         })
 
     shared_rooms_details = []
     for room in shared_rooms:
+        # Trova il nome del giocatore in questa stanza
+        my_player = room.players.filter_by(user_id=user.id).first()
         shared_rooms_details.append({
             'id': room.room_id,
             'players': [p.player_name for p in room.players.all()],
-            'created_at': room.created_at.isoformat()
+            'created_at': room.created_at.isoformat(),
+            'my_player_name': my_player.player_name if my_player else None
         })
 
     emit('login_success', {
@@ -777,12 +783,17 @@ def handle_save_character(data):
             # Aggiorna scheda esistente
             existing_character.player_name = player_name
             existing_character.name = character.get('name', '')
-            existing_character.photo_url = character.get('photo', '')
-            existing_character.concept = character.get('concept', '')
-            existing_character.identity = character.get('identity', '')
-            existing_character.archetype_id = character.get('archetype', '')
-            existing_character.qualities = json.dumps(character.get('qualities', []))
-            existing_character.abilities = json.dumps(character.get('abilities', []))
+            existing_character.motivation = character.get('motivation', '')
+            existing_character.archetype = character.get('archetype', '')
+            existing_character.photo = character.get('photo', '')
+            existing_character.traits = json.dumps(character.get('traits', []))
+            existing_character.selected_traits = json.dumps(character.get('selected_traits', []))
+            existing_character.empowered_traits = json.dumps(character.get('empowered_traits', []))
+            existing_character.quality_counter = character.get('quality_counter', 0)
+            existing_character.ability_counter = character.get('ability_counter', 0)
+            existing_character.misfortunes = json.dumps(character.get('misfortunes', []))
+            existing_character.lessons = json.dumps(character.get('lessons', []))
+            existing_character.resources = character.get('resources', '')
             existing_character.notes = character.get('notes', '')
         else:
             # Crea nuova scheda
@@ -791,12 +802,17 @@ def handle_save_character(data):
                 user_id=room_player.user_id,
                 player_name=player_name,
                 name=character.get('name', ''),
-                photo_url=character.get('photo', ''),
-                concept=character.get('concept', ''),
-                identity=character.get('identity', ''),
-                archetype_id=character.get('archetype', ''),
-                qualities=json.dumps(character.get('qualities', [])),
-                abilities=json.dumps(character.get('abilities', [])),
+                motivation=character.get('motivation', ''),
+                archetype=character.get('archetype', ''),
+                photo=character.get('photo', ''),
+                traits=json.dumps(character.get('traits', [])),
+                selected_traits=json.dumps(character.get('selected_traits', [])),
+                empowered_traits=json.dumps(character.get('empowered_traits', [])),
+                quality_counter=character.get('quality_counter', 0),
+                ability_counter=character.get('ability_counter', 0),
+                misfortunes=json.dumps(character.get('misfortunes', [])),
+                lessons=json.dumps(character.get('lessons', [])),
+                resources=character.get('resources', ''),
                 notes=character.get('notes', '')
             )
             db.session.add(new_character)
