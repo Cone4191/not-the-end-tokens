@@ -18,7 +18,13 @@ if DATABASE_URL:
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 else:
     # Fallback a SQLite per sviluppo locale
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///not_the_end.db'
+    # Usa check_same_thread=False per permettere l'uso multi-threaded con eventlet
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///not_the_end.db?check_same_thread=False'
+    # Configurazione pool per SQLite
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+    }
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
