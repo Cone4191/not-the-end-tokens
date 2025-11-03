@@ -4,6 +4,9 @@ const socket = io();
 // Variabili globali
 let currentRoomId = null;
 let currentPlayerName = null;
+let currentUsername = null;
+let currentUserId = null;
+let sessionId = null;
 
 // Stato adrenalina e confusione
 let adrenalineActive = false;
@@ -33,14 +36,36 @@ let lastDrawnTokens = 0; // Numero di token estratti nell'ultimo tiro
 let canRiskAll = false; // Flag per attivare "Rischia Tutto"
 
 // Elementi DOM
+const loginSection = document.getElementById('loginSection');
+const loginForm = document.getElementById('loginForm');
+const registerForm = document.getElementById('registerForm');
+const dashboardSection = document.getElementById('dashboardSection');
 const connectionSection = document.getElementById('connectionSection');
 const gameSection = document.getElementById('gameSection');
+
+// Login/Register elements
+const loginUsernameInput = document.getElementById('loginUsername');
+const loginPasswordInput = document.getElementById('loginPassword');
+const registerUsernameInput = document.getElementById('registerUsername');
+const registerPasswordInput = document.getElementById('registerPassword');
+const registerPasswordConfirmInput = document.getElementById('registerPasswordConfirm');
+const loginBtn = document.getElementById('loginBtn');
+const registerBtn = document.getElementById('registerBtn');
+const showRegisterBtn = document.getElementById('showRegisterBtn');
+const showLoginBtn = document.getElementById('showLoginBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+const usernameDisplay = document.getElementById('usernameDisplay');
 const playerNameInput = document.getElementById('playerName');
 const createRoomBtn = document.getElementById('createRoomBtn');
 const joinRoomBtn = document.getElementById('joinRoomBtn');
 const roomIdInput = document.getElementById('roomIdInput');
 const currentRoomIdSpan = document.getElementById('currentRoomId');
 const playersListSpan = document.getElementById('playersList');
+const createNewRoomBtn = document.getElementById('createNewRoomBtn');
+const joinRoomBtnDashboard = document.getElementById('joinRoomBtnDashboard');
+const joinRoomIdInput = document.getElementById('joinRoomIdInput');
+const ownedRoomsList = document.getElementById('ownedRoomsList');
+const sharedRoomsList = document.getElementById('sharedRoomsList');
 
 // Elementi sacchetto
 const successTokensInput = document.getElementById('successTokens');
@@ -76,9 +101,107 @@ const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 // Elementi utilità
 const resetBagBtn = document.getElementById('resetBagBtn');
 const leaveRoomBtn = document.getElementById('leaveRoomBtn');
+const backToDashboardBtn = document.getElementById('backToDashboardBtn');
 const actionLog = document.getElementById('actionLog');
 
 // === Event Listeners ===
+
+// Toggle form Login/Register
+showRegisterBtn.addEventListener('click', () => {
+    loginForm.classList.add('hidden');
+    registerForm.classList.remove('hidden');
+});
+
+showLoginBtn.addEventListener('click', () => {
+    registerForm.classList.add('hidden');
+    loginForm.classList.remove('hidden');
+});
+
+// Registrazione
+registerBtn.addEventListener('click', () => {
+    const username = registerUsernameInput.value.trim();
+    const password = registerPasswordInput.value;
+    const passwordConfirm = registerPasswordConfirmInput.value;
+
+    if (!username || !password) {
+        showLog('Username e password sono obbligatori', 'error');
+        return;
+    }
+
+    if (password.length < 6) {
+        showLog('La password deve essere almeno 6 caratteri', 'error');
+        return;
+    }
+
+    if (password !== passwordConfirm) {
+        showLog('Le password non corrispondono', 'error');
+        return;
+    }
+
+    socket.emit('register', {
+        username: username,
+        password: password
+    });
+});
+
+// Login
+loginBtn.addEventListener('click', () => {
+    const username = loginUsernameInput.value.trim();
+    const password = loginPasswordInput.value;
+
+    if (!username || !password) {
+        showLog('Username e password sono obbligatori', 'error');
+        return;
+    }
+
+    socket.emit('login', {
+        username: username,
+        password: password
+    });
+});
+
+// Logout
+logoutBtn.addEventListener('click', () => {
+    if (confirm('Sei sicuro di voler uscire?')) {
+        location.reload();
+    }
+});
+
+// Crea nuova stanza dalla dashboard
+createNewRoomBtn.addEventListener('click', () => {
+    const playerName = prompt('Inserisci il tuo nome per questa stanza:');
+    if (!playerName || !playerName.trim()) {
+        showLog('Nome non valido', 'error');
+        return;
+    }
+    currentPlayerName = playerName.trim();
+    socket.emit('create_room', {
+        player_name: currentPlayerName,
+        user_id: currentUserId
+    });
+});
+
+// Unisciti a stanza dalla dashboard
+joinRoomBtnDashboard.addEventListener('click', () => {
+    const roomId = joinRoomIdInput.value.trim();
+    if (!roomId) {
+        showLog('Inserisci un ID stanza', 'error');
+        return;
+    }
+
+    const playerName = prompt('Inserisci il tuo nome per questa stanza:');
+    if (!playerName || !playerName.trim()) {
+        showLog('Nome non valido', 'error');
+        return;
+    }
+
+    currentPlayerName = playerName.trim();
+    socket.emit('join_room', {
+        player_name: currentPlayerName,
+        room_id: roomId,
+        user_id: currentUserId
+    });
+});
 
 // Toggle Adrenalina
 adrenalineToggle.addEventListener('change', (e) => {
@@ -274,6 +397,19 @@ leaveRoomBtn.addEventListener('click', () => {
     }
 });
 
+backToDashboardBtn.addEventListener('click', () => {
+    if (confirm('Tornare alla dashboard? (La stanza rimarrà attiva)')) {
+        gameSection.classList.add('hidden');
+        dashboardSection.classList.remove('hidden');
+
+        // Ricarica le stanze - simula un nuovo login per aggiornare la lista
+        socket.emit('login', {
+            username: loginUsernameInput.value,
+            password: loginPasswordInput.value
+        });
+    }
+});
+
 // ========== EVENT LISTENERS SCHEDA PERSONAGGIO ==========
 
 // Upload foto
@@ -310,6 +446,36 @@ document.getElementById('addQualityBtn').addEventListener('click', () => addTrai
 document.getElementById('addAbilityBtn').addEventListener('click', () => addTrait('ability'));
 
 // === Socket Event Handlers ===
+
+socket.on('register_success', (data) => {
+    showLog(data.message, 'success');
+    // Torna al form di login
+    registerForm.classList.add('hidden');
+    loginForm.classList.remove('hidden');
+    // Pre-compila l'username
+    loginUsernameInput.value = registerUsernameInput.value;
+    // Pulisci i campi di registrazione
+    registerUsernameInput.value = '';
+    registerPasswordInput.value = '';
+    registerPasswordConfirmInput.value = '';
+});
+
+socket.on('login_success', (data) => {
+    sessionId = data.session_id;
+    currentUsername = data.username;
+    currentUserId = data.user_id;
+    usernameDisplay.textContent = data.username;
+
+    // Nascondi login, mostra dashboard
+    loginSection.classList.add('hidden');
+    dashboardSection.classList.remove('hidden');
+
+    // Popola le stanze
+    displayOwnedRooms(data.owned_rooms);
+    displaySharedRooms(data.shared_rooms);
+
+    showLog(`Benvenuto ${data.username}!`, 'success');
+});
 
 socket.on('room_created', (data) => {
     currentRoomId = data.room_id;
@@ -484,11 +650,77 @@ socket.on('characters_loaded', (data) => {
 // === Funzioni di utilità ===
 
 function showGameSection() {
+    dashboardSection.classList.add('hidden');
     connectionSection.classList.add('hidden');
     gameSection.classList.remove('hidden');
-    
+
     // Inizializza tratti
     initTraits();
+}
+
+function displayOwnedRooms(rooms) {
+    if (rooms.length === 0) {
+        ownedRoomsList.innerHTML = '<p class="no-rooms">Nessuna stanza creata. Crea la tua prima stanza!</p>';
+        return;
+    }
+
+    ownedRoomsList.innerHTML = rooms.map(room => {
+        const createdDate = new Date(room.created_at).toLocaleString('it-IT');
+        return `
+            <div class="room-card" onclick="enterRoom('${room.id}')">
+                <div class="room-card-header">
+                    <span class="room-id">🎲 ${room.id}</span>
+                    <span class="room-owner-badge">TUA</span>
+                </div>
+                <div class="room-players">
+                    👥 Giocatori: ${room.players.join(', ')}
+                </div>
+                <div class="room-created">
+                    📅 Creata: ${createdDate}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function displaySharedRooms(rooms) {
+    if (rooms.length === 0) {
+        sharedRoomsList.innerHTML = '<p class="no-rooms">Non partecipi a nessuna stanza condivisa</p>';
+        return;
+    }
+
+    sharedRoomsList.innerHTML = rooms.map(room => {
+        const createdDate = new Date(room.created_at).toLocaleString('it-IT');
+        return `
+            <div class="room-card" onclick="enterRoom('${room.id}')">
+                <div class="room-card-header">
+                    <span class="room-id">🎲 ${room.id}</span>
+                    <span class="room-shared-badge">CONDIVISA</span>
+                </div>
+                <div class="room-players">
+                    👥 Giocatori: ${room.players.join(', ')}
+                </div>
+                <div class="room-created">
+                    📅 Creata: ${createdDate}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function enterRoom(roomId) {
+    const playerName = prompt('Inserisci il tuo nome per questa stanza:');
+    if (!playerName || !playerName.trim()) {
+        showLog('Nome non valido', 'error');
+        return;
+    }
+
+    currentPlayerName = playerName.trim();
+    socket.emit('join_room', {
+        player_name: currentPlayerName,
+        room_id: roomId,
+        user_id: currentUserId
+    });
 }
 
 function updatePlayersList(players) {
@@ -683,29 +915,13 @@ function playSound(type) {
     console.log(`Sound: ${type}`);
 }
 
-// ========== FUNZIONI TRATTI DINAMICI ==========
+// ========== FUNZIONI TRATTI DINAMICI (MIGLIORATI) ==========
 
 function initTraits() {
     // Inizializza archetipo
     const archetypeBtn = document.querySelector('[data-id="archetype"]');
     if (archetypeBtn) {
         setupTraitButton(archetypeBtn, 'archetype');
-        
-        // Disabilita visivamente la selezione dell'archetipo
-        archetypeBtn.style.cursor = 'default';
-        const iconSpan = archetypeBtn.querySelector('.trait-icon');
-        if (iconSpan) {
-            iconSpan.style.opacity = '0.5';
-        }
-    }
-    
-    // Disabilita pulsante potenziamento archetipo
-    const archetypeEmpowerBtn = document.querySelector('.trait-empower-btn[data-id="archetype"]');
-    if (archetypeEmpowerBtn) {
-        archetypeEmpowerBtn.disabled = true;
-        archetypeEmpowerBtn.style.opacity = '0.3';
-        archetypeEmpowerBtn.style.cursor = 'not-allowed';
-        archetypeEmpowerBtn.title = 'L\'archetipo non può essere potenziato';
     }
     
     // Aggiorna contatori iniziali
@@ -721,22 +937,32 @@ function initTraits() {
 
 function setupTraitButton(btn, type) {
     const traitId = btn.dataset.id;
-    
-    // Click per selezionare (NON per archetipo)
+
+    // Click sul pulsante per selezionare/deselezionare
     btn.addEventListener('click', (e) => {
         // Se sta editando il nome, non fare nulla
         if (e.target.classList.contains('trait-name') && e.target === document.activeElement) {
             return;
         }
-        
-        // NON permettere selezione archetipo
-        if (type === 'archetype') {
+
+        // Se sta cliccando sulla stellina, non selezionare
+        if (e.target.classList.contains('trait-star-checkbox')) {
             return;
         }
-        
+
+        // Toggle selezione (primo click: seleziona, secondo click: deseleziona)
         toggleSelection(traitId, btn);
     });
-    
+
+    // Click sulla stellina per potenziare - indipendente dalla selezione
+    const starCheckbox = btn.querySelector('.trait-star-checkbox');
+    if (starCheckbox) {
+        starCheckbox.addEventListener('click', (e) => {
+            e.stopPropagation(); // Previeni la selezione del pulsante
+            toggleEmpowerment(traitId, btn);
+        });
+    }
+
     // Salva nome trait quando modificato
     const nameSpan = btn.querySelector('.trait-name');
     nameSpan.addEventListener('click', (e) => {
@@ -776,9 +1002,8 @@ function addTrait(type) {
     traitItem.innerHTML = `
         <div class="trait-btn" data-id="${traitId}" data-type="${type}">
             <span class="trait-name" contenteditable="true">${traitName}</span>
-            <span class="trait-icon">⬡</span>
+            <span class="trait-star-checkbox">⭐</span>
         </div>
-        <button class="trait-empower-btn" data-id="${traitId}" title="Potenzia">⭐</button>
         <button class="trait-remove-btn" data-id="${traitId}" title="Rimuovi">✖</button>
     `;
     
@@ -787,9 +1012,6 @@ function addTrait(type) {
     // Setup eventi
     const btn = traitItem.querySelector('.trait-btn');
     setupTraitButton(btn, type);
-    
-    const empowerBtn = traitItem.querySelector('.trait-empower-btn');
-    empowerBtn.addEventListener('click', () => toggleEmpowerment(traitId, empowerBtn));
     
     const removeBtn = traitItem.querySelector('.trait-remove-btn');
     removeBtn.addEventListener('click', () => removeTrait(traitId, type));
@@ -818,7 +1040,6 @@ function removeTrait(traitId, type) {
     
     // Aggiorna contatori
     const isQuality = type === 'quality';
-    const currentCount = isQuality ? qualityCounter : abilityCounter;
     
     if (isQuality) {
         qualityCounter = Math.max(0, qualityCounter - 1);
@@ -835,38 +1056,33 @@ function removeTrait(traitId, type) {
     updateTraitsSummary();
 }
 
-
-
 function toggleSelection(traitId, btnElement) {
     const isSelected = selectedTraits.has(traitId);
-    const iconSpan = btnElement.querySelector('.trait-icon');
     
     if (!isSelected) {
         // Non selezionato → Selezionato
         selectedTraits.add(traitId);
         btnElement.classList.add('selected');
-        iconSpan.textContent = '⬢';
     } else {
         // Selezionato → Deselezionato
         selectedTraits.delete(traitId);
         btnElement.classList.remove('selected');
-        iconSpan.textContent = '⬡';
     }
     
     updateTraitsSummary();
 }
 
-function toggleEmpowerment(traitId, empowerBtn) {
+function toggleEmpowerment(traitId, btnElement) {
     const isEmpowered = empoweredTraits.has(traitId);
     
     if (!isEmpowered) {
         // Aggiungi potenziamento
         empoweredTraits.add(traitId);
-        empowerBtn.classList.add('active');
+        btnElement.classList.add('empowered');
     } else {
         // Rimuovi potenziamento
         empoweredTraits.delete(traitId);
-        empowerBtn.classList.remove('active');
+        btnElement.classList.remove('empowered');
     }
     
     updateTraitsSummary();
@@ -906,19 +1122,13 @@ function resetTraitsAfterRoll() {
         const btn = document.querySelector(`[data-id="${traitId}"]`);
         if (!btn) return;
         
-        const iconSpan = btn.querySelector('.trait-icon');
-        
         // Deseleziona
         btn.classList.remove('selected');
-        iconSpan.textContent = '⬡';
         
         // Se era potenziato E selezionato → consuma potenziamento
         if (empoweredTraits.has(traitId)) {
             empoweredTraits.delete(traitId);
-            const empowerBtn = document.querySelector(`.trait-empower-btn[data-id="${traitId}"]`);
-            if (empowerBtn) {
-                empowerBtn.classList.remove('active');
-            }
+            btn.classList.remove('empowered');
         }
     });
     
@@ -1100,7 +1310,6 @@ function loadMyCharacter(character) {
             const btn = document.querySelector(`[data-id="${traitId}"]`);
             if (btn) {
                 btn.classList.add('selected');
-                btn.querySelector('.trait-icon').textContent = '⬢';
             }
         });
     }
@@ -1108,9 +1317,9 @@ function loadMyCharacter(character) {
     if (character.empowered_traits) {
         empoweredTraits = new Set(character.empowered_traits);
         empoweredTraits.forEach(traitId => {
-            const empowerBtn = document.querySelector(`.trait-empower-btn[data-id="${traitId}"]`);
-            if (empowerBtn) {
-                empowerBtn.classList.add('active');
+            const btn = document.querySelector(`[data-id="${traitId}"]`);
+            if (btn) {
+                btn.classList.add('empowered');
             }
         });
     }
@@ -1146,9 +1355,8 @@ function addTraitFromData(trait, type) {
     traitItem.innerHTML = `
         <div class="trait-btn" data-id="${trait.id}" data-type="${type}">
             <span class="trait-name" contenteditable="true">${trait.name}</span>
-            <span class="trait-icon">⬡</span>
+            <span class="trait-star-checkbox">⭐</span>
         </div>
-        <button class="trait-empower-btn" data-id="${trait.id}" title="Potenzia">⭐</button>
         <button class="trait-remove-btn" data-id="${trait.id}" title="Rimuovi">✖</button>
     `;
     
@@ -1157,9 +1365,6 @@ function addTraitFromData(trait, type) {
     // Setup eventi
     const btn = traitItem.querySelector('.trait-btn');
     setupTraitButton(btn, type);
-    
-    const empowerBtn = traitItem.querySelector('.trait-empower-btn');
-    empowerBtn.addEventListener('click', () => toggleEmpowerment(trait.id, empowerBtn));
     
     const removeBtn = traitItem.querySelector('.trait-remove-btn');
     removeBtn.addEventListener('click', () => removeTrait(trait.id, type));

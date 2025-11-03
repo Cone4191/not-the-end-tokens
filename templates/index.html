@@ -15,8 +15,81 @@
             <p class="subtitle">Token Drawer Multiplayer</p>
         </header>
 
-        <!-- Sezione Connessione -->
-        <div id="connectionSection" class="section">
+        <!-- Sezione Login/Registrazione -->
+        <div id="loginSection" class="section">
+            <div id="loginForm">
+                <h2>Accedi</h2>
+                <div class="form-group">
+                    <label for="loginUsername">Username:</label>
+                    <input type="text" id="loginUsername" placeholder="Inserisci il tuo username">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password:</label>
+                    <input type="password" id="loginPassword" placeholder="Inserisci la tua password">
+                </div>
+                <button id="loginBtn" class="btn btn-primary">Accedi</button>
+                <button id="showRegisterBtn" class="btn btn-secondary" style="margin-left: 10px;">Registrati</button>
+            </div>
+
+            <div id="registerForm" class="hidden">
+                <h2>Registrazione</h2>
+                <div class="form-group">
+                    <label for="registerUsername">Username:</label>
+                    <input type="text" id="registerUsername" placeholder="Scegli un username">
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">Password:</label>
+                    <input type="password" id="registerPassword" placeholder="Scegli una password (min 6 caratteri)">
+                </div>
+                <div class="form-group">
+                    <label for="registerPasswordConfirm">Conferma Password:</label>
+                    <input type="password" id="registerPasswordConfirm" placeholder="Ripeti la password">
+                </div>
+                <button id="registerBtn" class="btn btn-primary">Registrati</button>
+                <button id="showLoginBtn" class="btn btn-secondary" style="margin-left: 10px;">Torna al Login</button>
+            </div>
+        </div>
+
+        <!-- Dashboard (nascosta inizialmente) -->
+        <div id="dashboardSection" class="hidden">
+            <div class="section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0;">Dashboard - Benvenuto <span id="usernameDisplay"></span></h2>
+                    <button id="logoutBtn" class="btn btn-danger btn-small">Esci</button>
+                </div>
+
+                <!-- Le Mie Stanze -->
+                <div style="margin-bottom: 30px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3>🏠 Le Mie Stanze</h3>
+                        <button id="createNewRoomBtn" class="btn btn-primary">+ Crea Nuova Stanza</button>
+                    </div>
+                    <div id="ownedRoomsList" class="rooms-list">
+                        <p class="no-rooms">Nessuna stanza creata. Crea la tua prima stanza!</p>
+                    </div>
+                </div>
+
+                <!-- Stanze Condivise -->
+                <div>
+                    <h3>👥 Stanze Condivise</h3>
+                    <div id="sharedRoomsList" class="rooms-list">
+                        <p class="no-rooms">Non partecipi a nessuna stanza condivisa</p>
+                    </div>
+                </div>
+
+                <!-- Unisciti a una stanza -->
+                <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e0e0e0;">
+                    <h3>🔗 Unisciti a una Stanza</h3>
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <input type="text" id="joinRoomIdInput" placeholder="ID Stanza" style="flex: 1;">
+                        <button id="joinRoomBtnDashboard" class="btn btn-secondary">Unisciti</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sezione Connessione (nascosta inizialmente) -->
+        <div id="connectionSection" class="section hidden">
             <h2>Connessione</h2>
             <div class="form-group">
                 <label for="playerName">Il tuo nome:</label>
@@ -35,9 +108,16 @@
         <div id="gameSection" class="hidden">
             <!-- Info Stanza -->
             <div class="section room-info">
-                <h3>Stanza: <span id="currentRoomId"></span></h3>
-                <p class="players-list">Giocatori: <span id="playersList"></span></p>
-                <button id="leaveRoomBtn" class="btn btn-danger btn-small">Lascia stanza</button>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3>Stanza: <span id="currentRoomId"></span></h3>
+                        <p class="players-list">Giocatori: <span id="playersList"></span></p>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="backToDashboardBtn" class="btn btn-secondary btn-small">← Dashboard</button>
+                        <button id="leaveRoomBtn" class="btn btn-danger btn-small">Lascia stanza</button>
+                    </div>
+                </div>
             </div>
 
             <!-- Configurazione Sacchetto -->
@@ -155,9 +235,9 @@
                 <div class="traits-section">
                     <h3>Tratti (Abilità e Qualità)</h3>
                     <p class="traits-help">
-                        🔵 Click su nome: <strong>Seleziona</strong> (⬡ → ⬢ → ⬡)<br>
-                        ⭐ Click su stella: <strong>Potenzia/Rimuovi potenziamento</strong><br>
-                        Selezionato = +1⚪ | Selezionato + Potenziato = +2⚪ | Potenziato ma non selezionato = 0⚪
+                        🔵 Click su pulsante: <strong>Seleziona</strong> | 
+                        ⭐ Click su stellina: <strong>Potenzia</strong><br>
+                        Selezionato = +1⚪ | Selezionato + Potenziato = +2⚪
                     </p>
                     
                     <!-- Archetipo -->
@@ -167,9 +247,8 @@
                             <div class="trait-item">
                                 <div class="trait-btn" data-id="archetype" data-type="archetype">
                                     <span class="trait-name" contenteditable="true">Archetipo</span>
-                                    <span class="trait-icon">⬡</span>
+                                    <span class="trait-star-checkbox">⭐</span>
                                 </div>
-                                <button class="trait-empower-btn" data-id="archetype" title="Potenzia">⭐</button>
                             </div>
                         </div>
                     </div>

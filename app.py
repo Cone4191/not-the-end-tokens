@@ -4,13 +4,27 @@ import random
 import uuid
 from datetime import datetime
 import os
+import json
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'not-the-end-secret-key-change-in-production')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///not_the_end.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Dizionario per memorizzare le stanze attive
-rooms = {}
+# Inizializza database
+from models import db, User, Room, RoomPlayer, Character, DrawHistory, Session
+from auth import create_user, login_user, verify_session, logout_user
+
+db.init_app(app)
+
+# Crea tabelle se non esistono
+with app.app_context():
+    db.create_all()
+
+# Cache temporanea per le stanze attive (sacchetto in memoria)
+active_rooms_cache = {}  # room_id: {'bag': {...}, 'adrenaline': {}, 'confusion': {}}
 
 # Dizionario per generare meteo
 METEO_DATA = {
@@ -59,70 +73,225 @@ def index():
     return render_template('index.html')
 
 
+@socketio.on('register')
+def handle_register(data):
+    """Registrazione nuovo utente"""
+    username = data.get('username', '').strip()
+    password = data.get('password', '').strip()
+
+    if not username or not password:
+        emit('error', {'message': 'Username e password sono obbligatori'})
+        return
+
+    if len(password) < 6:
+        emit('error', {'message': 'La password deve essere almeno 6 caratteri'})
+        return
+
+    user, error = create_user(username, password)
+
+    if error:
+        emit('error', {'message': error})
+        return
+
+    emit('register_success', {'message': 'Registrazione completata! Effettua il login.'})
+
+
+@socketio.on('login')
+def handle_login(data):
+    """Login utente con password"""
+    username = data.get('username', '').strip()
+    password = data.get('password', '').strip()
+
+    if not username or not password:
+        emit('error', {'message': 'Username e password sono obbligatori'})
+        return
+
+    user, session_id, error = login_user(username, password)
+
+    if error:
+        emit('error', {'message': error})
+        return
+
+    # Ottieni le stanze dell'utente
+    owned_rooms = Room.query.filter_by(owner_id=user.id, is_active=True).all()
+
+    # Stanze condivise (dove l'utente è un giocatore ma non owner)
+    shared_room_ids = db.session.query(RoomPlayer.room_id).filter_by(user_id=user.id).distinct().all()
+    shared_rooms = []
+    for (room_id,) in shared_room_ids:
+        room = Room.query.get(room_id)
+        if room and room.is_active and room.owner_id != user.id:
+            shared_rooms.append(room)
+
+    # Prepara dettagli stanze
+    owned_rooms_details = []
+    for room in owned_rooms:
+        owned_rooms_details.append({
+            'id': room.room_id,
+            'players': [p.player_name for p in room.players.all()],
+            'created_at': room.created_at.isoformat()
+        })
+
+    shared_rooms_details = []
+    for room in shared_rooms:
+        shared_rooms_details.append({
+            'id': room.room_id,
+            'players': [p.player_name for p in room.players.all()],
+            'created_at': room.created_at.isoformat()
+        })
+
+    emit('login_success', {
+        'username': username,
+        'user_id': user.id,
+        'session_id': session_id,
+        'owned_rooms': owned_rooms_details,
+        'shared_rooms': shared_rooms_details
+    })
+
+
 @socketio.on('create_room')
 def handle_create_room(data):
     """Crea una nuova stanza di gioco"""
-    room_id = str(uuid.uuid4())[:8]
     player_name = data.get('player_name', 'Giocatore')
-    
-    rooms[room_id] = {
-        'players': [player_name],
-        'bag': {'successi': 0, 'complicazioni': 0},
-        'history': [],
-        'adrenaline': {},
-        'confusion': {},
-        'created_at': datetime.now().isoformat()
-    }
-    
-    join_room(room_id)
-    emit('room_created', {'room_id': room_id, 'player_name': player_name})
+    user_id = data.get('user_id')  # ID utente del creatore
+
+    if not user_id:
+        emit('error', {'message': 'Utente non autenticato'})
+        return
+
+    # Verifica che l'utente esista
+    user = User.query.get(user_id)
+    if not user:
+        emit('error', {'message': 'Utente non trovato'})
+        return
+
+    # Genera ID stanza univoco
+    room_id_str = str(uuid.uuid4())[:8]
+
+    # Crea stanza nel database
+    new_room = Room(
+        room_id=room_id_str,
+        owner_id=user_id,
+        bag_successi=0,
+        bag_complicazioni=0
+    )
+
+    # Aggiungi il creatore come primo giocatore
+    room_player = RoomPlayer(
+        player_name=player_name,
+        user_id=user_id
+    )
+    new_room.players.append(room_player)
+
+    try:
+        db.session.add(new_room)
+        db.session.commit()
+
+        # Inizializza cache per la stanza
+        active_rooms_cache[room_id_str] = {
+            'adrenaline': {},
+            'confusion': {}
+        }
+
+        join_room(room_id_str)
+        emit('room_created', {'room_id': room_id_str, 'player_name': player_name})
+
+    except Exception as e:
+        db.session.rollback()
+        emit('error', {'message': f'Errore nella creazione della stanza: {str(e)}'})
 
 
 @socketio.on('join_room')
 def handle_join_room(data):
     """Unisciti a una stanza esistente"""
-    room_id = data.get('room_id')
+    room_id_str = data.get('room_id')
     player_name = data.get('player_name', 'Giocatore')
+    user_id = data.get('user_id')  # ID utente
 
-    if room_id not in rooms:
+    # Trova la stanza nel database
+    room = Room.query.filter_by(room_id=room_id_str, is_active=True).first()
+
+    if not room:
         emit('error', {'message': 'Stanza non trovata'})
         return
 
-    if len(rooms[room_id]['players']) >= 10:
+    # Verifica limite giocatori
+    if room.players.count() >= 10:
         emit('error', {'message': 'Stanza piena (max 10 giocatori)'})
         return
 
-    # Controlla se il giocatore è già nella stanza
-    if player_name in rooms[room_id]['players']:
+    # Controlla se il nome è già in uso nella stanza
+    existing_player = room.players.filter_by(player_name=player_name).first()
+    if existing_player:
         emit('error', {'message': f'Nome "{player_name}" già in uso in questa stanza'})
         return
 
-    join_room(room_id)
-    rooms[room_id]['players'].append(player_name)
-    
-    emit('room_joined', {
-        'room_id': room_id,
-        'player_name': player_name,
-        'room_data': rooms[room_id]
-    })
-    
-    emit('player_joined', {
-        'player_name': player_name,
-        'players': rooms[room_id]['players']
-    }, room=room_id)
-    
-    # Carica automaticamente la scheda del giocatore se esiste
-    characters = rooms[room_id].get('characters', {})
-    my_character = characters.get(player_name)
-    
-    emit('my_character_loaded', {
-        'character': my_character
-    })
-    
-    # Invia tutte le schede degli altri giocatori
-    emit('characters_loaded', {
-        'characters': characters
-    })
+    # Aggiungi giocatore alla stanza
+    room_player = RoomPlayer(
+        room_id=room.id,
+        user_id=user_id,
+        player_name=player_name
+    )
+
+    try:
+        db.session.add(room_player)
+        db.session.commit()
+
+        # Inizializza cache se non esiste
+        if room_id_str not in active_rooms_cache:
+            active_rooms_cache[room_id_str] = {
+                'adrenaline': {},
+                'confusion': {}
+            }
+
+        join_room(room_id_str)
+
+        # Prepara dati stanza
+        players_list = [p.player_name for p in room.players.all()]
+        room_data = {
+            'room_id': room_id_str,
+            'players': players_list,
+            'bag': {
+                'successi': room.bag_successi,
+                'complicazioni': room.bag_complicazioni
+            },
+            'history': [h.to_dict() for h in room.history.order_by(DrawHistory.timestamp.desc()).limit(20).all()]
+        }
+
+        emit('room_joined', {
+            'room_id': room_id_str,
+            'player_name': player_name,
+            'room_data': room_data
+        })
+
+        emit('player_joined', {
+            'player_name': player_name,
+            'players': players_list
+        }, room=room_id_str)
+
+        # Carica scheda personaggio se esiste
+        my_character = None
+        if user_id:
+            character = Character.query.filter_by(room_id=room.id, user_id=user_id).first()
+            if character:
+                my_character = character.to_dict()
+
+        emit('my_character_loaded', {
+            'character': my_character
+        })
+
+        # Invia tutte le schede degli altri giocatori
+        characters_dict = {}
+        for char in room.characters.all():
+            characters_dict[char.player_name] = char.to_dict()
+
+        emit('characters_loaded', {
+            'characters': characters_dict
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        emit('error', {'message': f'Errore nell\'unirsi alla stanza: {str(e)}'})
 
 
 @socketio.on('configure_bag')
@@ -131,39 +300,59 @@ def handle_configure_bag(data):
     room_id = data.get('room_id')
     successi = int(data.get('successi', 0))
     complicazioni = int(data.get('complicazioni', 0))
-    
-    if room_id not in rooms:
+
+    # Trova la stanza nel database
+    room = Room.query.filter_by(room_id=room_id, is_active=True).first()
+
+    if not room:
         emit('error', {'message': 'Stanza non trovata'})
         return
-    
-    rooms[room_id]['bag'] = {
-        'successi': successi,
-        'complicazioni': complicazioni
-    }
-    
-    emit('bag_configured', {
-        'successi': successi,
-        'complicazioni': complicazioni
-    }, room=room_id)
+
+    # Aggiorna sacchetto nel database
+    room.bag_successi = successi
+    room.bag_complicazioni = complicazioni
+
+    try:
+        db.session.commit()
+
+        emit('bag_configured', {
+            'successi': successi,
+            'complicazioni': complicazioni
+        }, room=room_id)
+    except Exception as e:
+        db.session.rollback()
+        emit('error', {'message': f'Errore nella configurazione del sacchetto: {str(e)}'})
 
 @socketio.on('add_help')
 def handle_add_help(data):
     """Aggiungi aiuto (+1 token bianco)"""
     room_id = data.get('room_id')
     player_name = data.get('player_name', 'Giocatore')
-    
-    if room_id not in rooms:
+
+    # Trova la stanza nel database
+    room = Room.query.filter_by(room_id=room_id, is_active=True).first()
+
+    if not room:
         emit('error', {'message': 'Stanza non trovata'})
         return
-    
+
     # Aggiungi 1 token bianco
-    rooms[room_id]['bag']['successi'] += 1
-    
-    # Broadcast a tutti nella stanza
-    emit('help_added', {
-        'helper': player_name,
-        'bag': rooms[room_id]['bag']
-    }, room=room_id)
+    room.bag_successi += 1
+
+    try:
+        db.session.commit()
+
+        # Broadcast a tutti nella stanza
+        emit('help_added', {
+            'helper': player_name,
+            'bag': {
+                'successi': room.bag_successi,
+                'complicazioni': room.bag_complicazioni
+            }
+        }, room=room_id)
+    except Exception as e:
+        db.session.rollback()
+        emit('error', {'message': f'Errore nell\'aggiungere aiuto: {str(e)}'})
 
 @socketio.on('draw_tokens')
 def handle_draw_tokens(data):
@@ -177,7 +366,10 @@ def handle_draw_tokens(data):
 
         print(f"🎲 draw_tokens ricevuto: room={room_id}, tokens={num_tokens}, player={player_name}, adrenaline={adrenaline}, confusion={confusion}")
 
-        if room_id not in rooms:
+        # Trova la stanza nel database
+        room = Room.query.filter_by(room_id=room_id, is_active=True).first()
+
+        if not room:
             emit('error', {'message': 'Stanza non trovata'})
             return
     except Exception as e:
@@ -186,16 +378,18 @@ def handle_draw_tokens(data):
         traceback.print_exc()
         emit('error', {'message': f'Errore: {str(e)}'})
         return
-    
+
     try:
-        bag = rooms[room_id]['bag']
+        # Usa i valori del database
+        bag_successi = room.bag_successi
+        bag_complicazioni = room.bag_complicazioni
 
         # Adrenalina forza 4 token
         if adrenaline:
             num_tokens = 4
 
         # Verifica che ci siano abbastanza token
-        total_tokens = bag['successi'] + bag['complicazioni']
+        total_tokens = bag_successi + bag_complicazioni
         if total_tokens < num_tokens:
             emit('error', {'message': 'Non ci sono abbastanza token nel sacchetto'})
             return
@@ -206,24 +400,22 @@ def handle_draw_tokens(data):
             # I token NERI restano neri
 
             drawn = []
-            temp_bag = {
-                'successi': bag['successi'],
-                'complicazioni': bag['complicazioni']
-            }
+            temp_successi = bag_successi
+            temp_complicazioni = bag_complicazioni
 
             for _ in range(num_tokens):
-                if temp_bag['successi'] + temp_bag['complicazioni'] == 0:
+                if temp_successi + temp_complicazioni == 0:
                     break
 
                 # Estrai un token
-                total = temp_bag['successi'] + temp_bag['complicazioni']
+                total = temp_successi + temp_complicazioni
                 rand = random.random()
 
-                if rand < temp_bag['complicazioni'] / total:
+                if rand < temp_complicazioni / total:
                     # Estratto un NERO (resta nero)
                     drawn.append('complicazione')
-                    temp_bag['complicazioni'] -= 1
-                    bag['complicazioni'] -= 1
+                    temp_complicazioni -= 1
+                    bag_complicazioni -= 1
                 else:
                     # Estratto un BIANCO (diventa RANDOM)
                     # 50% bianco, 50% nero
@@ -231,50 +423,58 @@ def handle_draw_tokens(data):
                         drawn.append('successo')
                     else:
                         drawn.append('complicazione')
-                    temp_bag['successi'] -= 1
+                    temp_successi -= 1
                     # Aggiorna sacchetto reale: togli sempre il token BIANCO estratto fisicamente
-                    bag['successi'] -= 1
+                    bag_successi -= 1
 
         else:
             # ========== ESTRAZIONE NORMALE ==========
             drawn = []
             for _ in range(num_tokens):
-                if bag['successi'] + bag['complicazioni'] == 0:
+                if bag_successi + bag_complicazioni == 0:
                     break
 
                 # Protezione: assicurati che almeno un peso sia > 0
-                if bag['successi'] <= 0 and bag['complicazioni'] <= 0:
+                if bag_successi <= 0 and bag_complicazioni <= 0:
                     break
 
-                # Estrai usando le chiavi PLURALI del dizionario
+                # Estrai usando random.choices
                 token_key = random.choices(
                     ['successi', 'complicazioni'],
-                    weights=[max(0, bag['successi']), max(0, bag['complicazioni'])]
+                    weights=[max(0, bag_successi), max(0, bag_complicazioni)]
                 )[0]
 
                 # Aggiungi al risultato usando la forma SINGOLARE
                 token_name = 'successo' if token_key == 'successi' else 'complicazione'
                 drawn.append(token_name)
 
-                # Decrementa usando la chiave PLURALE
-                bag[token_key] -= 1
+                # Decrementa
+                if token_key == 'successi':
+                    bag_successi -= 1
+                else:
+                    bag_complicazioni -= 1
 
         # Conta risultati
         successi = drawn.count('successo')
         complicazioni = drawn.count('complicazione')
 
-        # Crea entry storico
-        history_entry = {
-            'player': player_name,
-            'drawn': drawn,
-            'successi': successi,
-            'complicazioni': complicazioni,
-            'timestamp': datetime.now().isoformat(),
-            'adrenaline': adrenaline,
-            'confusion': confusion
-        }
+        # Aggiorna il sacchetto nel database
+        room.bag_successi = bag_successi
+        room.bag_complicazioni = bag_complicazioni
 
-        rooms[room_id]['history'].append(history_entry)
+        # Crea entry storico nel database
+        history_entry = DrawHistory(
+            room_id=room.id,
+            player_name=player_name,
+            drawn_tokens=json.dumps(drawn),
+            successi=successi,
+            complicazioni=complicazioni,
+            has_adrenaline=adrenaline,
+            has_confusion=confusion
+        )
+
+        db.session.add(history_entry)
+        db.session.commit()
 
         # Invia risultato
         result = {
@@ -282,8 +482,19 @@ def handle_draw_tokens(data):
             'drawn': drawn,
             'successi': successi,
             'complicazioni': complicazioni,
-            'bag_remaining': bag,
-            'history': history_entry,
+            'bag_remaining': {
+                'successi': bag_successi,
+                'complicazioni': bag_complicazioni
+            },
+            'history': {
+                'player': player_name,
+                'drawn': drawn,
+                'successi': successi,
+                'complicazioni': complicazioni,
+                'timestamp': history_entry.timestamp.isoformat(),
+                'adrenaline': adrenaline,
+                'confusion': confusion
+            },
             'adrenaline': adrenaline,
             'confusion': confusion
         }
@@ -291,6 +502,7 @@ def handle_draw_tokens(data):
         emit('tokens_drawn', result, room=room_id)
 
     except Exception as e:
+        db.session.rollback()
         print(f"❌ Errore in draw_tokens: {e}")
         import traceback
         traceback.print_exc()
@@ -305,14 +517,18 @@ def handle_risk_all(data):
     previous_successi = data.get('previous_successi', 0)
     previous_complicazioni = data.get('previous_complicazioni', 0)
 
-    if room_id not in rooms:
+    # Trova la stanza nel database
+    room = Room.query.filter_by(room_id=room_id, is_active=True).first()
+
+    if not room:
         emit('error', {'message': 'Stanza non trovata'})
         return
 
-    bag = rooms[room_id]['bag']
+    bag_successi = room.bag_successi
+    bag_complicazioni = room.bag_complicazioni
 
     # Verifica che ci siano abbastanza token
-    total_tokens = bag['successi'] + bag['complicazioni']
+    total_tokens = bag_successi + bag_complicazioni
     if total_tokens < num_tokens:
         emit('error', {'message': 'Non ci sono abbastanza token nel sacchetto'})
         return
@@ -320,55 +536,77 @@ def handle_risk_all(data):
     # Estrazione normale (niente adrenalina/confusione per risk_all)
     drawn = []
     for _ in range(num_tokens):
-        if bag['successi'] + bag['complicazioni'] == 0:
+        if bag_successi + bag_complicazioni == 0:
             break
 
-        # Estrai usando le chiavi PLURALI del dizionario
+        # Estrai usando random.choices
         token_key = random.choices(
             ['successi', 'complicazioni'],
-            weights=[max(0, bag['successi']), max(0, bag['complicazioni'])]
+            weights=[max(0, bag_successi), max(0, bag_complicazioni)]
         )[0]
 
         # Aggiungi al risultato usando la forma SINGOLARE
         token_name = 'successo' if token_key == 'successi' else 'complicazione'
         drawn.append(token_name)
 
-        # Decrementa usando la chiave PLURALE
-        bag[token_key] -= 1
+        # Decrementa
+        if token_key == 'successi':
+            bag_successi -= 1
+        else:
+            bag_complicazioni -= 1
 
     # Conta risultati NUOVI
     new_successi = drawn.count('successo')
     new_complicazioni = drawn.count('complicazione')
-    
+
     # Calcola totali CUMULATIVI
     total_successi = previous_successi + new_successi
     total_complicazioni = previous_complicazioni + new_complicazioni
-    
-    # Crea entry storico
-    history_entry = {
-        'player': player_name,
-        'drawn': drawn,
-        'successi': new_successi,
-        'complicazioni': new_complicazioni,
-        'timestamp': datetime.now().isoformat(),
-        'risk_all': True,
-        'total_successi': total_successi,
-        'total_complicazioni': total_complicazioni
-    }
-    
-    rooms[room_id]['history'].append(history_entry)
-    
-    # Invia risultato con totali corretti
-    emit('risk_all_result', {
-        'player': player_name,
-        'drawn': drawn,
-        'successi': new_successi,
-        'complicazioni': new_complicazioni,
-        'total_successi': total_successi,
-        'total_complicazioni': total_complicazioni,
-        'bag_remaining': bag,
-        'history': history_entry
-    }, room=room_id)
+
+    # Aggiorna il sacchetto nel database
+    room.bag_successi = bag_successi
+    room.bag_complicazioni = bag_complicazioni
+
+    # Crea entry storico nel database
+    history_entry = DrawHistory(
+        room_id=room.id,
+        player_name=player_name,
+        drawn_tokens=json.dumps(drawn),
+        successi=new_successi,
+        complicazioni=new_complicazioni,
+        is_risk_all=True
+    )
+
+    try:
+        db.session.add(history_entry)
+        db.session.commit()
+
+        # Invia risultato con totali corretti
+        emit('risk_all_result', {
+            'player': player_name,
+            'drawn': drawn,
+            'successi': new_successi,
+            'complicazioni': new_complicazioni,
+            'total_successi': total_successi,
+            'total_complicazioni': total_complicazioni,
+            'bag_remaining': {
+                'successi': bag_successi,
+                'complicazioni': bag_complicazioni
+            },
+            'history': {
+                'player': player_name,
+                'drawn': drawn,
+                'successi': new_successi,
+                'complicazioni': new_complicazioni,
+                'timestamp': history_entry.timestamp.isoformat(),
+                'risk_all': True,
+                'total_successi': total_successi,
+                'total_complicazioni': total_complicazioni
+            }
+        }, room=room_id)
+    except Exception as e:
+        db.session.rollback()
+        emit('error', {'message': f'Errore durante rischia tutto: {str(e)}'})
 
 @socketio.on('return_tokens')
 def handle_return_tokens(data):
@@ -376,17 +614,29 @@ def handle_return_tokens(data):
     room_id = data.get('room_id')
     successi = int(data.get('successi', 0))
     complicazioni = int(data.get('complicazioni', 0))
-    
-    if room_id not in rooms:
+
+    # Trova la stanza nel database
+    room = Room.query.filter_by(room_id=room_id, is_active=True).first()
+
+    if not room:
         emit('error', {'message': 'Stanza non trovata'})
         return
-    
-    rooms[room_id]['bag']['successi'] += successi
-    rooms[room_id]['bag']['complicazioni'] += complicazioni
-    
-    emit('tokens_returned', {
-        'bag': rooms[room_id]['bag']
-    }, room=room_id)
+
+    room.bag_successi += successi
+    room.bag_complicazioni += complicazioni
+
+    try:
+        db.session.commit()
+
+        emit('tokens_returned', {
+            'bag': {
+                'successi': room.bag_successi,
+                'complicazioni': room.bag_complicazioni
+            }
+        }, room=room_id)
+    except Exception as e:
+        db.session.rollback()
+        emit('error', {'message': f'Errore nel rimettere i token: {str(e)}'})
 
 
 @socketio.on('update_adrenaline')
@@ -395,13 +645,20 @@ def handle_update_adrenaline(data):
     room_id = data.get('room_id')
     player_name = data.get('player_name')
     adrenaline = int(data.get('adrenaline', 0))
-    
-    if room_id not in rooms:
+
+    # Verifica che la stanza esista nel database
+    room = Room.query.filter_by(room_id=room_id, is_active=True).first()
+
+    if not room:
         emit('error', {'message': 'Stanza non trovata'})
         return
-    
-    rooms[room_id]['adrenaline'][player_name] = adrenaline
-    
+
+    # Usa cache per stati temporanei
+    if room_id not in active_rooms_cache:
+        active_rooms_cache[room_id] = {'adrenaline': {}, 'confusion': {}}
+
+    active_rooms_cache[room_id]['adrenaline'][player_name] = adrenaline
+
     emit('adrenaline_updated', {
         'player': player_name,
         'adrenaline': adrenaline
@@ -414,13 +671,20 @@ def handle_update_confusion(data):
     room_id = data.get('room_id')
     player_name = data.get('player_name')
     confusion = int(data.get('confusion', 0))
-    
-    if room_id not in rooms:
+
+    # Verifica che la stanza esista nel database
+    room = Room.query.filter_by(room_id=room_id, is_active=True).first()
+
+    if not room:
         emit('error', {'message': 'Stanza non trovata'})
         return
-    
-    rooms[room_id]['confusion'][player_name] = confusion
-    
+
+    # Usa cache per stati temporanei
+    if room_id not in active_rooms_cache:
+        active_rooms_cache[room_id] = {'adrenaline': {}, 'confusion': {}}
+
+    active_rooms_cache[room_id]['confusion'][player_name] = confusion
+
     emit('confusion_updated', {
         'player': player_name,
         'confusion': confusion
@@ -434,22 +698,27 @@ def handle_generate_weather(data):
     zona = data.get('zona', 'pianura').lower()
     player_name = data.get('player_name', 'Giocatore')
     room_id = data.get('room_id')
-    
+
     if stagione not in METEO_DATA or zona not in METEO_DATA[stagione]:
         emit('error', {'message': 'Stagione o zona non valida'})
         return
-    
+
     meteo = random.choice(METEO_DATA[stagione][zona])
-    
+
     result = {
         'stagione': stagione.capitalize(),
         'zona': zona.capitalize(),
         'meteo': meteo,
         'player': player_name
     }
-    
-    if room_id and room_id in rooms:
-        emit('weather_generated', result, room=room_id)
+
+    if room_id:
+        # Verifica che la stanza esista nel database
+        room = Room.query.filter_by(room_id=room_id, is_active=True).first()
+        if room:
+            emit('weather_generated', result, room=room_id)
+        else:
+            emit('weather_generated', result)
     else:
         emit('weather_generated', result)
 
@@ -458,14 +727,23 @@ def handle_generate_weather(data):
 def handle_reset_bag(data):
     """Resetta il sacchetto"""
     room_id = data.get('room_id')
-    
-    if room_id not in rooms:
+
+    # Trova la stanza nel database
+    room = Room.query.filter_by(room_id=room_id, is_active=True).first()
+
+    if not room:
         emit('error', {'message': 'Stanza non trovata'})
         return
-    
-    rooms[room_id]['bag'] = {'successi': 0, 'complicazioni': 0}
-    
-    emit('bag_reset', {}, room=room_id)
+
+    room.bag_successi = 0
+    room.bag_complicazioni = 0
+
+    try:
+        db.session.commit()
+        emit('bag_reset', {}, room=room_id)
+    except Exception as e:
+        db.session.rollback()
+        emit('error', {'message': f'Errore nel resettare il sacchetto: {str(e)}'})
 
 @socketio.on('save_character')
 def handle_save_character(data):
@@ -473,38 +751,88 @@ def handle_save_character(data):
     room_id = data.get('room_id')
     player_name = data.get('player_name')
     character = data.get('character')
-    
-    if room_id not in rooms:
+
+    # Trova la stanza nel database
+    room = Room.query.filter_by(room_id=room_id, is_active=True).first()
+
+    if not room:
         emit('error', {'message': 'Stanza non trovata'})
         return
-    
-    # Inizializza dizionario characters se non esiste
-    if 'characters' not in rooms[room_id]:
-        rooms[room_id]['characters'] = {}
-    
-    # Salva la scheda del giocatore
-    rooms[room_id]['characters'][player_name] = character
-    
-    # Notifica tutti nella stanza
-    emit('character_saved', {
-        'player_name': player_name,
-        'character': character
-    }, room=room_id)
+
+    # Trova il giocatore nella stanza
+    room_player = room.players.filter_by(player_name=player_name).first()
+
+    if not room_player:
+        emit('error', {'message': 'Giocatore non trovato nella stanza'})
+        return
+
+    # Cerca se esiste già una scheda per questo giocatore
+    existing_character = Character.query.filter_by(
+        room_id=room.id,
+        user_id=room_player.user_id
+    ).first()
+
+    try:
+        if existing_character:
+            # Aggiorna scheda esistente
+            existing_character.player_name = player_name
+            existing_character.name = character.get('name', '')
+            existing_character.photo_url = character.get('photo', '')
+            existing_character.concept = character.get('concept', '')
+            existing_character.identity = character.get('identity', '')
+            existing_character.archetype_id = character.get('archetype', '')
+            existing_character.qualities = json.dumps(character.get('qualities', []))
+            existing_character.abilities = json.dumps(character.get('abilities', []))
+            existing_character.notes = character.get('notes', '')
+        else:
+            # Crea nuova scheda
+            new_character = Character(
+                room_id=room.id,
+                user_id=room_player.user_id,
+                player_name=player_name,
+                name=character.get('name', ''),
+                photo_url=character.get('photo', ''),
+                concept=character.get('concept', ''),
+                identity=character.get('identity', ''),
+                archetype_id=character.get('archetype', ''),
+                qualities=json.dumps(character.get('qualities', [])),
+                abilities=json.dumps(character.get('abilities', [])),
+                notes=character.get('notes', '')
+            )
+            db.session.add(new_character)
+
+        db.session.commit()
+
+        # Notifica tutti nella stanza
+        emit('character_saved', {
+            'player_name': player_name,
+            'character': character
+        }, room=room_id)
+
+    except Exception as e:
+        db.session.rollback()
+        emit('error', {'message': f'Errore nel salvare la scheda: {str(e)}'})
 
 
 @socketio.on('get_characters')
 def handle_get_characters(data):
     """Recupera tutte le schede della stanza"""
     room_id = data.get('room_id')
-    
-    if room_id not in rooms:
+
+    # Trova la stanza nel database
+    room = Room.query.filter_by(room_id=room_id, is_active=True).first()
+
+    if not room:
         emit('error', {'message': 'Stanza non trovata'})
         return
-    
-    characters = rooms[room_id].get('characters', {})
-    
+
+    # Recupera tutte le schede della stanza
+    characters_dict = {}
+    for character in room.characters.all():
+        characters_dict[character.player_name] = character.to_dict()
+
     emit('characters_loaded', {
-        'characters': characters
+        'characters': characters_dict
     })
 
 
@@ -513,17 +841,20 @@ def handle_load_my_character(data):
     """Carica la scheda del giocatore corrente"""
     room_id = data.get('room_id')
     player_name = data.get('player_name')
-    
-    if room_id not in rooms:
+
+    # Trova la stanza nel database
+    room = Room.query.filter_by(room_id=room_id, is_active=True).first()
+
+    if not room:
         emit('error', {'message': 'Stanza non trovata'})
         return
-    
-    characters = rooms[room_id].get('characters', {})
-    character = characters.get(player_name)
-    
+
+    # Cerca la scheda del giocatore
+    character = room.characters.filter_by(player_name=player_name).first()
+
     if character:
         emit('my_character_loaded', {
-            'character': character
+            'character': character.to_dict()
         })
     else:
         emit('my_character_loaded', {
