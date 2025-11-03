@@ -1259,18 +1259,20 @@ function saveCharacterSheet() {
     // Risorse e note
     characterSheet.resources = document.getElementById('resources').value;
     characterSheet.notes = document.getElementById('notes').value;
-    
+
+    // Aggiungi stati di gioco
+    characterSheet.selected_traits = Array.from(selectedTraits);
+    characterSheet.empowered_traits = Array.from(empoweredTraits);
+    characterSheet.quality_counter = qualityCounter;
+    characterSheet.ability_counter = abilityCounter;
+
     // Invia al server
     socket.emit('save_character', {
         room_id: currentRoomId,
         player_name: currentPlayerName,
-        character: characterSheet,
-        selected_traits: Array.from(selectedTraits),
-        empowered_traits: Array.from(empoweredTraits),
-        quality_counter: qualityCounter,
-        ability_counter: abilityCounter
+        character: characterSheet
     });
-    
+
     showLog('💾 Scheda salvata!', 'success');
 }
 

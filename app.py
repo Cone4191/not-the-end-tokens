@@ -226,22 +226,27 @@ def handle_join_room(data):
         emit('error', {'message': 'Stanza piena (max 10 giocatori)'})
         return
 
-    # Controlla se il nome è già in uso nella stanza
+    # Controlla se il giocatore è già nella stanza
     existing_player = room.players.filter_by(player_name=player_name).first()
-    if existing_player:
+
+    # Se il nome esiste ma è lo stesso utente, è un re-join (non fare nulla, continua)
+    if existing_player and existing_player.user_id != user_id:
         emit('error', {'message': f'Nome "{player_name}" già in uso in questa stanza'})
         return
 
-    # Aggiungi giocatore alla stanza
-    room_player = RoomPlayer(
-        room_id=room.id,
-        user_id=user_id,
-        player_name=player_name
-    )
+    # Se il giocatore non è ancora nella stanza, aggiungilo
+    if not existing_player:
+        room_player = RoomPlayer(
+            room_id=room.id,
+            user_id=user_id,
+            player_name=player_name
+        )
+        db.session.add(room_player)
 
     try:
-        db.session.add(room_player)
-        db.session.commit()
+        # Commit solo se abbiamo aggiunto un nuovo giocatore
+        if not existing_player:
+            db.session.commit()
 
         # Inizializza cache se non esiste
         if room_id_str not in active_rooms_cache:
