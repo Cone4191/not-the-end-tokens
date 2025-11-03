@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit, join_room, leave_room
+from sqlalchemy.pool import NullPool
 import random
 import uuid
 from datetime import datetime
@@ -17,6 +18,10 @@ if DATABASE_URL:
         DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
     print(f"🗄️  Using PostgreSQL database")
+    # Configurazione pool per eventlet - usa NullPool per evitare conflitti con greenlets
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'poolclass': NullPool  # NullPool crea una nuova connessione per ogni richiesta, evita problemi con eventlet
+    }
 else:
     # Fallback a SQLite per sviluppo locale
     # Usa check_same_thread=False per permettere l'uso multi-threaded con eventlet
