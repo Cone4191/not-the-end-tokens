@@ -402,10 +402,9 @@ backToDashboardBtn.addEventListener('click', () => {
         gameSection.classList.add('hidden');
         dashboardSection.classList.remove('hidden');
 
-        // Ricarica le stanze - simula un nuovo login per aggiornare la lista
-        socket.emit('login', {
-            username: loginUsernameInput.value,
-            password: loginPasswordInput.value
+        // Ricarica le stanze usando la sessione esistente
+        socket.emit('refresh_rooms', {
+            session_id: sessionId
         });
     }
 });
@@ -475,6 +474,12 @@ socket.on('login_success', (data) => {
     displaySharedRooms(data.shared_rooms);
 
     showLog(`Benvenuto ${data.username}!`, 'success');
+});
+
+socket.on('rooms_refreshed', (data) => {
+    // Aggiorna le stanze nella dashboard
+    displayOwnedRooms(data.owned_rooms);
+    displaySharedRooms(data.shared_rooms);
 });
 
 socket.on('room_created', (data) => {

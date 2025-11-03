@@ -120,6 +120,59 @@ def handle_register(data):
     emit('register_success', {'message': 'Registrazione completata! Effettua il login.'})
 
 
+@socketio.on('refresh_rooms')
+def handle_refresh_rooms(data):
+    """Ricarica le stanze dell'utente usando la sessione esistente"""
+    session_id = data.get('session_id')
+
+    if not session_id:
+        emit('error', {'message': 'Sessione non valida'})
+        return
+
+    user, error = verify_session(session_id)
+
+    if error:
+        emit('error', {'message': error})
+        return
+
+    # Trova stanze di cui è proprietario
+    owned_rooms = Room.query.filter_by(owner_id=user.id, is_active=True).all()
+
+    # Trova stanze condivise (in cui è giocatore ma non proprietario)
+    shared_room_ids = db.session.query(RoomPlayer.room_id).filter_by(user_id=user.id).distinct().all()
+    shared_rooms = []
+    for (room_id,) in shared_room_ids:
+        room = Room.query.get(room_id)
+        if room and room.is_active and room.owner_id != user.id:
+            shared_rooms.append(room)
+
+    # Prepara dettagli stanze
+    owned_rooms_details = []
+    for room in owned_rooms:
+        my_player = room.players.filter_by(user_id=user.id).first()
+        owned_rooms_details.append({
+            'id': room.room_id,
+            'players': [p.player_name for p in room.players.all()],
+            'created_at': room.created_at.isoformat(),
+            'my_player_name': my_player.player_name if my_player else None
+        })
+
+    shared_rooms_details = []
+    for room in shared_rooms:
+        my_player = room.players.filter_by(user_id=user.id).first()
+        shared_rooms_details.append({
+            'id': room.room_id,
+            'players': [p.player_name for p in room.players.all()],
+            'created_at': room.created_at.isoformat(),
+            'my_player_name': my_player.player_name if my_player else None
+        })
+
+    emit('rooms_refreshed', {
+        'owned_rooms': owned_rooms_details,
+        'shared_rooms': shared_rooms_details
+    })
+
+
 @socketio.on('login')
 def handle_login(data):
     """Login utente con password"""
