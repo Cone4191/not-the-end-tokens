@@ -8,7 +8,18 @@ import json
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'not-the-end-secret-key-change-in-production')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///not_the_end.db'
+
+# Database configuration - PostgreSQL in produzione, SQLite in locale
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if DATABASE_URL:
+    # Render fornisce DATABASE_URL con postgres://, ma SQLAlchemy richiede postgresql://
+    if DATABASE_URL.startswith('postgres://'):
+        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+else:
+    # Fallback a SQLite per sviluppo locale
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///not_the_end.db'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 socketio = SocketIO(app, cors_allowed_origins="*")
