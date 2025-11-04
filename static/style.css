@@ -108,6 +108,98 @@ body.dark-mode .character-card:hover {
     border-color: #4CAF50;
 }
 
+/* Dark Mode - Aree specifiche con sfondo più chiaro */
+body.dark-mode .trait-row {
+    background: rgba(50, 50, 65, 0.8);
+}
+
+body.dark-mode .trait-row h4 {
+    color: #4CAF50;
+}
+
+body.dark-mode .trait-btn.selected {
+    background: #2a5298;
+    border-color: #1e3c72;
+}
+
+body.dark-mode .status-message {
+    background: rgba(60, 60, 75, 0.9);
+    border-color: #ffc107;
+    color: #ffd54f;
+}
+
+body.dark-mode .weather-result {
+    background: rgba(50, 50, 65, 0.8);
+    color: #e0e0e0;
+}
+
+body.dark-mode .history-log {
+    background: rgba(50, 50, 65, 0.8);
+    color: #e0e0e0;
+}
+
+body.dark-mode .history-entry {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-mode .history-entry .player-name {
+    color: #4CAF50;
+}
+
+body.dark-mode .notes-editor {
+    background: rgba(50, 50, 65, 0.9);
+    color: #e0e0e0;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+body.dark-mode .notes-editor:focus {
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
+}
+
+body.dark-mode .notes-editor h3 {
+    color: #4CAF50;
+    border-bottom-color: #4CAF50;
+}
+
+body.dark-mode .notes-editor strong {
+    color: #e0e0e0;
+}
+
+body.dark-mode .notes-editor em {
+    color: #b0b0b0;
+}
+
+body.dark-mode .notes-editor[data-placeholder]:empty:before {
+    color: #666;
+}
+
+body.dark-mode .notes-toolbar {
+    background: rgba(40, 40, 50, 0.8);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+body.dark-mode .toolbar-btn {
+    background: rgba(70, 70, 85, 0.8);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #e0e0e0;
+}
+
+body.dark-mode .toolbar-btn:hover {
+    background: rgba(90, 90, 105, 0.9);
+    color: #fff;
+}
+
+body.dark-mode .player-status-card {
+    background: rgba(50, 50, 65, 0.8);
+    border-left-color: #4CAF50;
+    color: #e0e0e0;
+}
+
+body.dark-mode .player-status-card strong {
+    color: #4CAF50;
+}
+
 .container {
     max-width: 1200px;
     margin: 0 auto;

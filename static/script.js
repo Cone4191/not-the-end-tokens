@@ -437,6 +437,9 @@ document.getElementById('saveCharacterBtn').addEventListener('click', saveCharac
 // Configura sacchetto da scheda
 document.getElementById('configureFromSheetBtn').addEventListener('click', configureFromSheet);
 
+// Configura sacchetto da scheda (pulsante nell'archetipo)
+document.getElementById('configureFromSheetBtnArchetype').addEventListener('click', configureFromSheet);
+
 // Reset tratti dopo tiro
 document.getElementById('resetTraitsBtn').addEventListener('click', resetTraitsAfterRoll);
 
