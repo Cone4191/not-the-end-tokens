@@ -588,6 +588,8 @@ socket.on('tokens_drawn', (data) => {
 });
 
 socket.on('risk_all_result', (data) => {
+    console.log('🎲 Risk all result ricevuto:', data);
+
     // Aggiorna sacchetto
     bagSuccessi.textContent = data.bag_remaining.successi;
     bagComplicazioni.textContent = data.bag_remaining.complicazioni;
@@ -852,26 +854,36 @@ function displayDrawResult(data) {
 }
 
 function appendRiskTokens(data) {
+    console.log('📍 appendRiskTokens chiamata con:', data);
     const tokenDisplay = document.getElementById('tokenDisplay');
-    
-    if (!tokenDisplay) return;
-    
+
+    if (!tokenDisplay) {
+        console.error('❌ tokenDisplay non trovato!');
+        return;
+    }
+
+    console.log('✅ tokenDisplay trovato, token attuali:', tokenDisplay.children.length);
+
     // Aggiungi i nuovi token
-    data.drawn.forEach(token => {
+    data.drawn.forEach((token, index) => {
         const className = token === 'successo' ? 'token-success' : 'token-complication';
         const emoji = token === 'successo' ? '⚪' : '⚫';
-        
+
         const tokenDiv = document.createElement('div');
         tokenDiv.className = `token ${className}`;
         tokenDiv.textContent = emoji;
         tokenDiv.style.animation = 'tokenPop 0.5s ease';
-        
+
         tokenDisplay.appendChild(tokenDiv);
+        console.log(`➕ Aggiunto token ${index + 1}/${data.drawn.length}: ${emoji}`);
     });
-    
+
+    console.log('✅ Token totali dopo append:', tokenDisplay.children.length);
+
     // Aggiorna conteggio
     document.getElementById('successCount').textContent = data.total_successi;
     document.getElementById('complicationCount').textContent = data.total_complicazioni;
+    console.log(`📊 Contatori aggiornati: ${data.total_successi}⚪ ${data.total_complicazioni}⚫`);
 }
 
 function revealMysteryTokens(data) {
