@@ -700,7 +700,7 @@ def handle_risk_all(data):
         drawn_tokens=json.dumps(drawn),
         successi=new_successi,
         complicazioni=new_complicazioni,
-        is_risk_all=True
+        risk_all=True
     )
 
     try:
