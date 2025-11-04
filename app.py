@@ -595,8 +595,8 @@ def handle_draw_tokens(data):
             drawn_tokens=json.dumps(drawn),
             successi=successi,
             complicazioni=complicazioni,
-            has_adrenaline=adrenaline,
-            has_confusion=confusion
+            adrenaline=adrenaline,
+            confusion=confusion
         )
 
         db.session.add(history_entry)
