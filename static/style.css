@@ -1480,15 +1480,17 @@ input:checked + .slider:before {
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 4px;
-    color: #fff;
+    color: #000;
     cursor: pointer;
     font-size: 0.9em;
+    font-weight: 600;
     transition: all 0.2s;
 }
 
 .toolbar-btn:hover {
     background: rgba(255, 255, 255, 0.2);
     border-color: #4CAF50;
+    color: #000;
 }
 
 .toolbar-btn:active {
