@@ -130,26 +130,25 @@
             <!-- Configurazione Sacchetto -->
             <div class="section">
                 <h2>🎒 Configurazione Sacchetto</h2>
-                <div class="token-controls">
-                    <div class="control-group">
+                <div class="token-controls-inline">
+                    <div class="control-group-inline">
                         <label for="successTokens">Token Successo (⚪):</label>
-                        <input type="number" id="successTokens" min="0" value="0">
+                        <input type="number" id="successTokens" class="token-input-small" min="0" max="99" value="0">
                     </div>
-                    <div class="control-group">
+                    <div class="control-group-inline">
                         <label for="complicationTokens">Token Complicazione (⚫):</label>
-                        <input type="number" id="complicationTokens" min="0" value="0">
+                        <input type="number" id="complicationTokens" class="token-input-small" min="0" max="99" value="0">
                     </div>
                 </div>
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">
                     <button id="configureBagBtn" class="btn btn-primary">Configura Sacchetto</button>
                     <button id="resetBagBtn" class="btn btn-danger">Reset Sacchetto</button>
+                    <!-- Pulsante Aiuto (appare solo dopo configurazione) -->
+                    <button id="addHelpBtn" class="btn btn-success hidden">
+                        💪 Aggiungi il tuo Aiuto (+1⚪)
+                    </button>
                 </div>
-
-                <!-- Pulsante Aiuto (appare solo dopo configurazione) -->
-                <button id="addHelpBtn" class="btn btn-success hidden" style="margin-top: 10px;">
-                    💪 Aggiungi il tuo Aiuto (+1⚪)
-                </button>
-                <p id="helpStatus" class="help-status hidden"></p>
+                <p id="helpStatus" class="help-status hidden" style="margin-top: 10px;"></p>
                 
                 <div class="bag-status" style="margin-top: 15px;">
                     Sacchetto: <span id="bagSuccessi">0</span> ⚪ | <span id="bagComplicazioni">0</span> ⚫
@@ -243,7 +242,13 @@
 
                 <!-- Tratti semplificati a righe -->
                 <div class="traits-section">
-                    <h3>Tratti (Abilità e Qualità)</h3>
+                    <div class="collapsible-header" id="traitsToggleHeader">
+                        <h3>Tratti (Abilità e Qualità)</h3>
+                        <button class="collapse-btn" id="traitsCollapseBtn">
+                            <span class="collapse-icon">▼</span>
+                        </button>
+                    </div>
+                    <div class="collapsible-content" id="traitsCollapsibleContent">
                     <p class="traits-help">
                         🔵 Click su pulsante: <strong>Seleziona</strong> | 
                         ⭐ Click su stellina: <strong>Potenzia</strong><br>
@@ -329,7 +334,9 @@
                         <textarea id="lesson2" placeholder="Lezione 2"></textarea>
                         <textarea id="lesson3" placeholder="Lezione 3"></textarea>
                     </div>
-                    
+                    </div>
+                    <!-- Fine contenuto collapsible -->
+
                     <div class="resources-section">
                         <h3>Risorse</h3>
                         <textarea id="resources" placeholder="Di quali risorse dispongo?"></textarea>

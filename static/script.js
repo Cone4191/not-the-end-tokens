@@ -1817,6 +1817,22 @@ riskAllModal.addEventListener('click', (e) => {
     }
 });
 
+// === COLLAPSIBLE SECTIONS ===
+
+const traitsCollapseBtn = document.getElementById('traitsCollapseBtn');
+const traitsCollapsibleContent = document.getElementById('traitsCollapsibleContent');
+const traitsToggleHeader = document.getElementById('traitsToggleHeader');
+
+// Toggle collapsible content
+traitsToggleHeader.addEventListener('click', () => {
+    traitsCollapsibleContent.classList.toggle('collapsed');
+    traitsCollapseBtn.classList.toggle('collapsed');
+});
+
+traitsCollapseBtn.addEventListener('click', (e) => {
+    e.stopPropagation(); // Prevent header click event
+});
+
 // === DARK MODE ===
 
 const darkModeToggle = document.getElementById('darkModeToggle');
