@@ -13,6 +13,7 @@ body {
     min-height: 100vh;
     padding: 20px;
     position: relative;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 body::before {
@@ -24,6 +25,87 @@ body::before {
     height: 100%;
     background: rgba(0, 0, 0, 0.3);
     z-index: -1;
+    transition: background 0.3s ease;
+}
+
+/* Dark Mode */
+body.dark-mode {
+    color: #e0e0e0;
+}
+
+body.dark-mode::before {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+body.dark-mode .section {
+    background: rgba(30, 30, 40, 0.95);
+    color: #e0e0e0;
+}
+
+body.dark-mode .section h2 {
+    color: #4CAF50;
+    border-bottom-color: rgba(76, 175, 80, 0.3);
+}
+
+body.dark-mode input,
+body.dark-mode textarea,
+body.dark-mode select {
+    background: rgba(40, 40, 50, 0.9);
+    color: #e0e0e0;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+body.dark-mode input::placeholder,
+body.dark-mode textarea::placeholder {
+    color: #888;
+}
+
+body.dark-mode .btn {
+    background: rgba(76, 175, 80, 0.8);
+    border-color: #4CAF50;
+}
+
+body.dark-mode .btn:hover {
+    background: rgba(76, 175, 80, 1);
+}
+
+body.dark-mode .btn-secondary {
+    background: rgba(100, 100, 120, 0.8);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+body.dark-mode .btn-secondary:hover {
+    background: rgba(120, 120, 140, 0.9);
+}
+
+body.dark-mode .trait-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #e0e0e0;
+}
+
+body.dark-mode .trait-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+body.dark-mode .room-card {
+    background: rgba(40, 40, 50, 0.9);
+    border-color: rgba(76, 175, 80, 0.3);
+}
+
+body.dark-mode .room-card:hover {
+    border-color: #4CAF50;
+    background: rgba(50, 50, 60, 0.95);
+}
+
+body.dark-mode .character-card {
+    background: rgba(40, 40, 50, 0.9);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+body.dark-mode .character-card:hover {
+    background: rgba(50, 50, 60, 0.95);
+    border-color: #4CAF50;
 }
 
 .container {
@@ -33,7 +115,6 @@ body::before {
 
 /* Header */
 header {
-    text-align: center;
     color: white;
     margin-bottom: 30px;
     padding: 20px;
@@ -41,6 +122,18 @@ header {
     border-radius: 10px;
     backdrop-filter: blur(10px);
     border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.header-title {
+    flex: 1;
+    text-align: center;
 }
 
 header h1 {
@@ -52,6 +145,38 @@ header h1 {
 .subtitle {
     font-size: 1.1em;
     opacity: 0.9;
+}
+
+.dark-mode-toggle {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1.5em;
+}
+
+.dark-mode-toggle:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: #4CAF50;
+    transform: scale(1.1);
+}
+
+.dark-mode-toggle:active {
+    transform: scale(0.95);
+}
+
+body.dark-mode .dark-mode-toggle .toggle-icon::after {
+    content: '☀️';
+}
+
+.toggle-icon::after {
+    content: '🌙';
 }
 
 /* Sections */
