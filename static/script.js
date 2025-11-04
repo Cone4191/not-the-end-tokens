@@ -644,6 +644,15 @@ socket.on('character_saved', (data) => {
 socket.on('my_character_loaded', (data) => {
     if (data.character) {
         loadMyCharacter(data.character);
+
+        // Carica anche gli appunti nell'editor ricco
+        if (data.character.notes) {
+            const notesEditor = document.getElementById('notesEditor');
+            if (notesEditor) {
+                notesEditor.innerHTML = data.character.notes;
+            }
+        }
+
         showLog('📜 Scheda caricata!', 'success');
     }
 });
@@ -1257,9 +1266,11 @@ function saveCharacterSheet() {
         document.getElementById('lesson3').value
     ];
     
-    // Risorse e note
+    // Risorse
     characterSheet.resources = document.getElementById('resources').value;
-    characterSheet.notes = document.getElementById('notes').value;
+
+    // Note vengono salvate separatamente dall'editor ricco
+    // (vengono aggiunte quando si clicca su Salva Appunti)
 
     // Aggiungi stati di gioco
     characterSheet.selected_traits = Array.from(selectedTraits);
@@ -1349,10 +1360,9 @@ function loadMyCharacter(character) {
     document.getElementById('lesson2').value = character.lessons[1] || '';
     document.getElementById('lesson3').value = character.lessons[2] || '';
     
-    // Risorse e note
+    // Risorse
     document.getElementById('resources').value = character.resources || '';
-    document.getElementById('notes').value = character.notes || '';
-    
+
     characterSheet = character;
     
     updateTraitsSummary();
@@ -1645,12 +1655,12 @@ function showCharacterModal(char) {
         `;
     }
 
-    // Note
+    // Note (supporta HTML formattato)
     if (char.notes) {
         html += `
             <h3>📝 Note</h3>
             <div class="info-row">
-                <div class="info-value">${char.notes.replace(/\n/g, '<br>')}</div>
+                <div class="info-value">${char.notes}</div>
             </div>
         `;
     }
@@ -1676,6 +1686,48 @@ socket.on('visibility_updated', () => {
     if (isMaster) {
         loadMasterCharacters();
     }
+});
+
+// === EDITOR APPUNTI RICCO ===
+
+const notesEditor = document.getElementById('notesEditor');
+const saveNotesBtn = document.getElementById('saveNotesBtn');
+const toolbarButtons = document.querySelectorAll('.toolbar-btn');
+
+// Gestione pulsanti toolbar
+toolbarButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const command = btn.dataset.command;
+
+        if (command.includes(':')) {
+            // Comandi con parametri (es. formatBlock:h3)
+            const [cmd, value] = command.split(':');
+            document.execCommand(cmd, false, value);
+        } else {
+            // Comandi semplici (bold, italic, etc.)
+            document.execCommand(command, false, null);
+        }
+
+        notesEditor.focus();
+    });
+});
+
+// Salva appunti nella scheda personaggio
+saveNotesBtn.addEventListener('click', () => {
+    const notesHTML = notesEditor.innerHTML;
+
+    // Aggiungi gli appunti alla scheda corrente
+    characterSheet.notes = notesHTML;
+
+    // Salva tutta la scheda con gli appunti aggiornati
+    socket.emit('save_character', {
+        room_id: currentRoomId,
+        player_name: currentPlayerName,
+        character: characterSheet
+    });
+
+    showLog('📝 Appunti salvati!', 'success');
 });
 
 // Inizializzazione

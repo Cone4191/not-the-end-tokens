@@ -322,11 +322,6 @@
                         <h3>Risorse</h3>
                         <textarea id="resources" placeholder="Di quali risorse dispongo?"></textarea>
                     </div>
-                    
-                    <div class="notes-section">
-                        <h3>Appunti</h3>
-                        <textarea id="notes" placeholder="Appunti di gioco..."></textarea>
-                    </div>
                 </div>
 
                 <!-- Azioni Scheda -->
@@ -365,6 +360,24 @@
                 <h2>📜 Storico Estrazioni</h2>
                 <button id="clearHistoryBtn" class="btn btn-secondary btn-small">Pulisci storico</button>
                 <div id="historyLog" class="history-log"></div>
+            </div>
+
+            <!-- Appunti di Gioco -->
+            <div class="section notes-editor-section">
+                <h2>📝 Appunti di Gioco</h2>
+                <div class="notes-toolbar">
+                    <button type="button" class="toolbar-btn" data-command="bold" title="Grassetto"><strong>B</strong></button>
+                    <button type="button" class="toolbar-btn" data-command="italic" title="Corsivo"><em>I</em></button>
+                    <button type="button" class="toolbar-btn" data-command="underline" title="Sottolineato"><u>U</u></button>
+                    <span class="toolbar-separator">|</span>
+                    <button type="button" class="toolbar-btn" data-command="insertUnorderedList" title="Elenco puntato">• Lista</button>
+                    <button type="button" class="toolbar-btn" data-command="insertOrderedList" title="Elenco numerato">1. Lista</button>
+                    <span class="toolbar-separator">|</span>
+                    <button type="button" class="toolbar-btn" data-command="formatBlock:h3" title="Titolo">H</button>
+                    <button type="button" class="toolbar-btn" data-command="removeFormat" title="Rimuovi formattazione">✖</button>
+                </div>
+                <div id="notesEditor" class="notes-editor" contenteditable="true" data-placeholder="Scrivi qui i tuoi appunti di gioco..."></div>
+                <button id="saveNotesBtn" class="btn btn-primary" style="margin-top: 10px;">💾 Salva Appunti</button>
             </div>
 
             <!-- Schede Altri Giocatori -->
