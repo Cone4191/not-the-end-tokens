@@ -82,6 +82,7 @@ class RoomPlayer(db.Model):
     room_id = db.Column(db.Integer, db.ForeignKey('rooms.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Può essere null se giocatore guest
     player_name = db.Column(db.String(100), nullable=False)
+    is_master = db.Column(db.Boolean, default=False)  # Il creatore della stanza è il master
     joined_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def __repr__(self):
@@ -120,6 +121,9 @@ class Character(db.Model):
     resources = db.Column(db.Text)
     notes = db.Column(db.Text)
 
+    # Visibilità scheda - solo il master può vederla per default
+    visible_to_all = db.Column(db.Boolean, default=False)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -129,6 +133,8 @@ class Character(db.Model):
     def to_dict(self):
         """Converti personaggio in dizionario"""
         return {
+            'id': self.id,
+            'player_name': self.player_name,
             'name': self.name,
             'motivation': self.motivation,
             'archetype': self.archetype,
@@ -141,7 +147,8 @@ class Character(db.Model):
             'misfortunes': json.loads(self.misfortunes) if self.misfortunes else [],
             'lessons': json.loads(self.lessons) if self.lessons else [],
             'resources': self.resources,
-            'notes': self.notes
+            'notes': self.notes,
+            'visible_to_all': self.visible_to_all
         }
 
 

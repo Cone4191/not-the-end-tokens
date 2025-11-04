@@ -337,17 +337,6 @@
                 </div>
             </div>
 
-            <!-- Schede Altri Giocatori -->
-            <div class="section other-characters-section">
-                <h2>👥 Schede Altri Giocatori</h2>
-                <div id="otherCharactersTabs" class="character-tabs">
-                    <!-- Tabs generati dinamicamente -->
-                </div>
-                <div id="otherCharactersContent" class="other-character-view">
-                    <p class="no-characters">Nessun altro giocatore con scheda caricata</p>
-                </div>
-            </div>
-
             <!-- Generatore Meteo -->
             <div class="section">
                 <h2>🌦️ Generatore Meteo</h2>
@@ -378,6 +367,37 @@
                 <div id="historyLog" class="history-log"></div>
             </div>
 
+            <!-- Schede Altri Giocatori -->
+            <div class="section other-characters-section">
+                <h2>👥 Schede Altri Giocatori</h2>
+
+                <!-- Controlli Master (visibili solo al master) -->
+                <div id="masterControls" class="master-controls hidden">
+                    <h3>🎯 Controlli Master</h3>
+                    <p>Seleziona quali schede rendere visibili agli altri giocatori:</p>
+                    <div id="visibilityControls" class="visibility-controls">
+                        <!-- Checkboxes generate dinamicamente -->
+                    </div>
+                    <button id="updateVisibilityBtn" class="btn btn-primary">💾 Aggiorna Visibilità</button>
+                </div>
+
+                <!-- Lista schede visibili -->
+                <div id="otherCharactersList" class="other-characters-list">
+                    <p class="no-characters">Nessuna scheda visibile</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Modal per visualizzare scheda in sola lettura -->
+    <div id="characterModal" class="modal hidden">
+        <div class="modal-content character-modal-content">
+            <span class="modal-close">&times;</span>
+            <h2 id="modalCharacterName">Scheda Personaggio</h2>
+            <div id="modalCharacterDetails" class="modal-character-details">
+                <!-- Contenuto scheda generato dinamicamente -->
+            </div>
         </div>
     </div>
 

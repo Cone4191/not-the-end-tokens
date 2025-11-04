@@ -1493,10 +1493,293 @@ function requestCharactersOnJoin() {
             room_id: currentRoomId,
             player_name: currentPlayerName
         });
-        
-        loadOtherCharacters();
+
+        loadVisibleCharacters();
     }
 }
+
+// === NUOVA GESTIONE SCHEDE ALTRI GIOCATORI ===
+
+let isMaster = false;
+let allCharactersData = [];
+
+// Elementi DOM
+const masterControls = document.getElementById('masterControls');
+const visibilityControls = document.getElementById('visibilityControls');
+const updateVisibilityBtn = document.getElementById('updateVisibilityBtn');
+const otherCharactersList = document.getElementById('otherCharactersList');
+const characterModal = document.getElementById('characterModal');
+const modalClose = document.querySelector('.modal-close');
+const modalCharacterName = document.getElementById('modalCharacterName');
+const modalCharacterDetails = document.getElementById('modalCharacterDetails');
+
+// Carica schede per il master
+function loadMasterCharacters() {
+    if (!currentRoomId || !currentUserId) return;
+
+    socket.emit('get_all_characters_for_master', {
+        room_id: currentRoomId,
+        user_id: currentUserId
+    });
+}
+
+// Carica schede visibili per tutti
+function loadVisibleCharacters() {
+    if (!currentRoomId || !currentUserId) return;
+
+    socket.emit('get_characters', {
+        room_id: currentRoomId,
+        user_id: currentUserId
+    });
+}
+
+// Mostra controlli master
+socket.on('all_characters_loaded', (data) => {
+    allCharactersData = data.characters;
+    updateMasterControls();
+});
+
+// Aggiorna controlli master
+function updateMasterControls() {
+    if (!isMaster || allCharactersData.length === 0) {
+        masterControls.classList.add('hidden');
+        return;
+    }
+
+    masterControls.classList.remove('hidden');
+    visibilityControls.innerHTML = '';
+
+    // Filtra solo le schede degli altri giocatori (non la propria)
+    const otherCharacters = allCharactersData.filter(char => char.player_name !== currentPlayerName);
+
+    if (otherCharacters.length === 0) {
+        visibilityControls.innerHTML = '<p style="color: #aaa;">Nessun altro giocatore ha ancora creato una scheda</p>';
+        return;
+    }
+
+    otherCharacters.forEach(char => {
+        const item = document.createElement('div');
+        item.className = 'visibility-control-item';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = `vis-${char.id}`;
+        checkbox.value = char.id;
+        checkbox.checked = char.visible_to_all;
+
+        const label = document.createElement('label');
+        label.htmlFor = `vis-${char.id}`;
+        label.innerHTML = `
+            <strong>${char.name || 'Senza nome'}</strong>
+            <span class="character-preview">(${char.player_name} - ${char.archetype || 'Nessun archetipo'})</span>
+        `;
+
+        item.appendChild(checkbox);
+        item.appendChild(label);
+        visibilityControls.appendChild(item);
+    });
+}
+
+// Aggiorna visibilità schede
+updateVisibilityBtn.addEventListener('click', () => {
+    const checkboxes = visibilityControls.querySelectorAll('input[type="checkbox"]:checked');
+    const selectedIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+
+    socket.emit('toggle_character_visibility', {
+        room_id: currentRoomId,
+        user_id: currentUserId,
+        character_ids: selectedIds
+    });
+
+    showLog('Visibilità schede aggiornata!', 'success');
+});
+
+// Aggiorna lista schede visibili
+socket.on('characters_loaded', (data) => {
+    isMaster = data.is_master || false;
+
+    const characters = data.characters;
+    const otherCharacters = Object.values(characters).filter(char => char.player_name !== currentPlayerName);
+
+    displayOtherCharacters(otherCharacters);
+
+    // Se sono il master, carica anche i controlli
+    if (isMaster) {
+        loadMasterCharacters();
+    }
+});
+
+// Visualizza schede altri giocatori
+function displayOtherCharacters(characters) {
+    otherCharactersList.innerHTML = '';
+
+    if (!characters || characters.length === 0) {
+        otherCharactersList.innerHTML = '<p class="no-characters">Nessuna scheda visibile</p>';
+        return;
+    }
+
+    characters.forEach(char => {
+        const card = document.createElement('div');
+        card.className = 'character-card';
+        card.onclick = () => showCharacterModal(char);
+
+        const hasPhoto = char.photo && char.photo.length > 0;
+
+        card.innerHTML = `
+            <div class="character-card-header">
+                ${hasPhoto
+                    ? `<img src="${char.photo}" class="character-card-photo" alt="${char.name}">`
+                    : `<div class="character-card-photo no-photo">👤</div>`
+                }
+                <div class="character-card-info">
+                    <div class="character-card-name">${char.name || 'Senza nome'}</div>
+                    <div class="character-card-player">Giocatore: ${char.player_name}</div>
+                </div>
+            </div>
+            <div class="character-card-details">
+                ${char.archetype ? `<div class="character-card-archetype">${char.archetype}</div>` : ''}
+                ${char.motivation ? `<div>${char.motivation.substring(0, 80)}${char.motivation.length > 80 ? '...' : ''}</div>` : ''}
+            </div>
+        `;
+
+        otherCharactersList.appendChild(card);
+    });
+}
+
+// Mostra modal con scheda completa
+function showCharacterModal(char) {
+    modalCharacterName.textContent = char.name || 'Scheda Personaggio';
+
+    const hasPhoto = char.photo && char.photo.length > 0;
+
+    let html = '';
+
+    // Foto
+    if (hasPhoto) {
+        html += `<img src="${char.photo}" class="character-photo-large" alt="${char.name}">`;
+    }
+
+    // Informazioni base
+    html += `
+        <div class="info-row">
+            <div class="info-label">Giocatore</div>
+            <div class="info-value">${char.player_name}</div>
+        </div>
+    `;
+
+    if (char.archetype) {
+        html += `
+            <div class="info-row">
+                <div class="info-label">Archetipo</div>
+                <div class="info-value">${char.archetype}</div>
+            </div>
+        `;
+    }
+
+    if (char.motivation) {
+        html += `
+            <div class="info-row">
+                <div class="info-label">Motivazione</div>
+                <div class="info-value">${char.motivation}</div>
+            </div>
+        `;
+    }
+
+    // Tratti
+    if (char.traits && char.traits.length > 0) {
+        html += '<h3>Qualità e Abilità</h3>';
+        html += '<div class="traits-grid">';
+
+        char.traits.forEach(trait => {
+            const isSelected = char.selected_traits && char.selected_traits.includes(trait.id);
+            const isEmpowered = char.empowered_traits && char.empowered_traits.includes(trait.id);
+            const classes = ['trait-item'];
+
+            if (isSelected) classes.push('selected');
+            if (isEmpowered) classes.push('empowered');
+
+            html += `
+                <div class="${classes.join(' ')}">
+                    ${trait.type === 'quality' ? '⭐' : '🎯'} ${trait.name}
+                    ${isEmpowered ? ' ⚡' : ''}
+                </div>
+            `;
+        });
+
+        html += '</div>';
+    }
+
+    // Contatori
+    html += '<h3>Contatori</h3>';
+    html += `
+        <div class="info-row">
+            <span class="counter-badge">⭐ Qualità: ${char.quality_counter || 0}</span>
+            <span class="counter-badge">🎯 Abilità: ${char.ability_counter || 0}</span>
+        </div>
+    `;
+
+    // Sventure
+    if (char.misfortunes && char.misfortunes.length > 0) {
+        html += '<h3>💔 Sventure</h3>';
+        html += '<div class="info-row"><div class="info-value"><ul>';
+        char.misfortunes.forEach(m => {
+            html += `<li>${m}</li>`;
+        });
+        html += '</ul></div></div>';
+    }
+
+    // Lezioni
+    if (char.lessons && char.lessons.length > 0) {
+        html += '<h3>📖 Lezioni Apprese</h3>';
+        html += '<div class="info-row"><div class="info-value"><ul>';
+        char.lessons.forEach(l => {
+            html += `<li>${l}</li>`;
+        });
+        html += '</ul></div></div>';
+    }
+
+    // Risorse
+    if (char.resources) {
+        html += `
+            <h3>💰 Risorse</h3>
+            <div class="info-row">
+                <div class="info-value">${char.resources.replace(/\n/g, '<br>')}</div>
+            </div>
+        `;
+    }
+
+    // Note
+    if (char.notes) {
+        html += `
+            <h3>📝 Note</h3>
+            <div class="info-row">
+                <div class="info-value">${char.notes.replace(/\n/g, '<br>')}</div>
+            </div>
+        `;
+    }
+
+    modalCharacterDetails.innerHTML = html;
+    characterModal.classList.remove('hidden');
+}
+
+// Chiudi modal
+modalClose.onclick = () => {
+    characterModal.classList.add('hidden');
+};
+
+characterModal.onclick = (e) => {
+    if (e.target === characterModal) {
+        characterModal.classList.add('hidden');
+    }
+};
+
+// Aggiorna schede quando cambia la visibilità
+socket.on('visibility_updated', () => {
+    loadVisibleCharacters();
+    if (isMaster) {
+        loadMasterCharacters();
+    }
+});
 
 // Inizializzazione
 console.log('🎲 Not The End Token Drawer - Ready!');

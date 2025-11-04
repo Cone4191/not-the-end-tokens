@@ -259,10 +259,11 @@ def handle_create_room(data):
         bag_complicazioni=0
     )
 
-    # Aggiungi il creatore come primo giocatore
+    # Aggiungi il creatore come primo giocatore e master
     room_player = RoomPlayer(
         player_name=player_name,
-        user_id=user_id
+        user_id=user_id,
+        is_master=True  # Il creatore è sempre il master
     )
     new_room.players.append(room_player)
 
@@ -916,6 +917,7 @@ def handle_save_character(data):
 def handle_get_characters(data):
     """Recupera tutte le schede della stanza"""
     room_id = data.get('room_id')
+    user_id = data.get('user_id')
 
     # Trova la stanza nel database
     room = Room.query.filter_by(room_id=room_id, is_active=True).first()
@@ -924,14 +926,97 @@ def handle_get_characters(data):
         emit('error', {'message': 'Stanza non trovata'})
         return
 
+    # Verifica se l'utente è il master
+    room_player = room.players.filter_by(user_id=user_id).first()
+    is_master = room_player.is_master if room_player else False
+
     # Recupera tutte le schede della stanza
     characters_dict = {}
     for character in room.characters.all():
-        characters_dict[character.player_name] = character.to_dict()
+        # Se sei il master o il proprietario della scheda, vedi tutto
+        # Altrimenti vedi solo le schede con visible_to_all=True
+        if is_master or character.user_id == user_id or character.visible_to_all:
+            characters_dict[character.player_name] = character.to_dict()
 
     emit('characters_loaded', {
-        'characters': characters_dict
+        'characters': characters_dict,
+        'is_master': is_master
     })
+
+
+@socketio.on('get_all_characters_for_master')
+def handle_get_all_characters_for_master(data):
+    """Recupera tutte le schede per il master (incluse quelle non visibili)"""
+    room_id = data.get('room_id')
+    user_id = data.get('user_id')
+
+    # Trova la stanza nel database
+    room = Room.query.filter_by(room_id=room_id, is_active=True).first()
+
+    if not room:
+        emit('error', {'message': 'Stanza non trovata'})
+        return
+
+    # Verifica che l'utente sia il master
+    room_player = room.players.filter_by(user_id=user_id).first()
+
+    if not room_player or not room_player.is_master:
+        emit('error', {'message': 'Solo il master può vedere tutte le schede'})
+        return
+
+    # Recupera tutte le schede della stanza con informazioni di visibilità
+    characters_list = []
+    for character in room.characters.all():
+        char_dict = character.to_dict()
+        characters_list.append(char_dict)
+
+    emit('all_characters_loaded', {
+        'characters': characters_list
+    })
+
+
+@socketio.on('toggle_character_visibility')
+def handle_toggle_character_visibility(data):
+    """Toggle visibilità di una scheda (solo master)"""
+    room_id = data.get('room_id')
+    user_id = data.get('user_id')
+    character_ids = data.get('character_ids', [])  # Lista di ID delle schede da rendere visibili
+
+    # Trova la stanza nel database
+    room = Room.query.filter_by(room_id=room_id, is_active=True).first()
+
+    if not room:
+        emit('error', {'message': 'Stanza non trovata'})
+        return
+
+    # Verifica che l'utente sia il master
+    room_player = room.players.filter_by(user_id=user_id).first()
+
+    if not room_player or not room_player.is_master:
+        emit('error', {'message': 'Solo il master può modificare la visibilità'})
+        return
+
+    try:
+        # Prima imposta tutte le schede come non visibili
+        for character in room.characters.all():
+            character.visible_to_all = False
+
+        # Poi rendi visibili solo quelle selezionate
+        for char_id in character_ids:
+            character = Character.query.filter_by(id=char_id, room_id=room.id).first()
+            if character:
+                character.visible_to_all = True
+
+        db.session.commit()
+
+        # Notifica tutti nella stanza che la visibilità è cambiata
+        emit('visibility_updated', {
+            'message': 'Visibilità schede aggiornata'
+        }, room=room_id)
+
+    except Exception as e:
+        db.session.rollback()
+        emit('error', {'message': f'Errore nell\'aggiornare la visibilità: {str(e)}'})
 
 
 @socketio.on('load_my_character')
