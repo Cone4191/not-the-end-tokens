@@ -636,9 +636,9 @@ socket.on('disconnect', () => {
 
 socket.on('character_saved', (data) => {
     showLog(`💾 ${data.player_name} ha aggiornato la scheda`, 'success');
-    
+
     // Aggiorna la vista delle schede degli altri giocatori
-    loadOtherCharacters();
+    loadVisibleCharacters();
 });
 
 socket.on('my_character_loaded', (data) => {
@@ -646,10 +646,6 @@ socket.on('my_character_loaded', (data) => {
         loadMyCharacter(data.character);
         showLog('📜 Scheda caricata!', 'success');
     }
-});
-
-socket.on('characters_loaded', (data) => {
-    displayOtherCharacters(data.characters);
 });
 
 // === Funzioni di utilità ===
@@ -1386,105 +1382,6 @@ function addTraitFromData(trait, type) {
     
     const removeBtn = traitItem.querySelector('.trait-remove-btn');
     removeBtn.addEventListener('click', () => removeTrait(trait.id, type));
-}
-
-function loadOtherCharacters() {
-    socket.emit('get_characters', {
-        room_id: currentRoomId
-    });
-}
-
-function displayOtherCharacters(characters) {
-    const tabsContainer = document.getElementById('otherCharactersTabs');
-    const contentContainer = document.getElementById('otherCharactersContent');
-    
-    // Filtra solo gli altri giocatori
-    const otherPlayers = Object.keys(characters).filter(name => name !== currentPlayerName);
-    
-    if (otherPlayers.length === 0) {
-        tabsContainer.innerHTML = '';
-        contentContainer.innerHTML = '<p class="no-characters">Nessun altro giocatore con scheda caricata</p>';
-        return;
-    }
-    
-    // Crea tab per ogni giocatore
-    tabsContainer.innerHTML = '';
-    otherPlayers.forEach((playerName, index) => {
-        const tab = document.createElement('button');
-        tab.className = 'character-tab';
-        tab.textContent = playerName;
-        if (index === 0) tab.classList.add('active');
-        
-        tab.addEventListener('click', () => {
-            document.querySelectorAll('.character-tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            displayCharacterView(characters[playerName], playerName);
-        });
-        
-        tabsContainer.appendChild(tab);
-    });
-    
-    // Mostra la prima scheda
-    displayCharacterView(characters[otherPlayers[0]], otherPlayers[0]);
-}
-
-function displayCharacterView(character, playerName) {
-    const container = document.getElementById('otherCharactersContent');
-    
-    if (!character) {
-        container.innerHTML = '<p class="no-characters">Scheda non disponibile</p>';
-        return;
-    }
-    
-    container.innerHTML = `
-        <div class="character-view-readonly">
-            <div class="character-header">
-                <div class="character-photo">
-                    <img src="${character.photo || ''}" alt="Foto ${playerName}" style="width: 150px; height: 150px;">
-                </div>
-                <div class="character-info">
-                    <h3>${character.name || playerName}</h3>
-                    <p><strong>Motivazione:</strong> ${character.motivation || 'Non specificata'}</p>
-                    <p><strong>Archetipo:</strong> ${character.archetype || 'Non specificato'}</p>
-                </div>
-            </div>
-            
-            <div style="margin-top: 20px;">
-                <h4>Tratti</h4>
-                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 10px;">
-                    ${character.traits ? character.traits.map(t => `
-                        <div style="padding: 8px; background: #f0f0f0; border-radius: 5px; font-size: 0.85em;">
-                            <strong>${t.type === 'ability' ? '🔵' : t.type === 'quality' ? '🟢' : '🔴'}</strong> ${t.name}
-                        </div>
-                    `).join('') : '<p>Nessun tratto</p>'}
-                </div>
-            </div>
-            
-            <div style="margin-top: 20px;">
-                <h4>Sventure</h4>
-                <ul>
-                    ${character.misfortunes.filter(m => m).map(m => `<li>${m}</li>`).join('') || '<li>Nessuna</li>'}
-                </ul>
-            </div>
-            
-            <div style="margin-top: 20px;">
-                <h4>Lezioni</h4>
-                <ul>
-                    ${character.lessons.filter(l => l).map(l => `<li>${l}</li>`).join('') || '<li>Nessuna</li>'}
-                </ul>
-            </div>
-            
-            <div style="margin-top: 20px;">
-                <h4>Risorse</h4>
-                <p>${character.resources || 'Nessuna'}</p>
-            </div>
-            
-            <div style="margin-top: 20px;">
-                <h4>Appunti</h4>
-                <p>${character.notes || 'Nessuno'}</p>
-            </div>
-        </div>
-    `;
 }
 
 function requestCharactersOnJoin() {
