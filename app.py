@@ -43,9 +43,46 @@ from auth import create_user, login_user, verify_session, logout_user
 
 db.init_app(app)
 
-# Crea tabelle se non esistono
+# Crea tabelle se non esistono e aggiorna schema
 with app.app_context():
     db.create_all()
+
+    # Migrazione: aggiungi colonne mancanti per PostgreSQL
+    try:
+        with db.engine.connect() as conn:
+            # Verifica e aggiungi is_master a room_players
+            result = conn.execute(db.text("""
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_name='room_players' AND column_name='is_master'
+            """))
+            if not result.fetchone():
+                print("🔄 Aggiunta colonna is_master a room_players...")
+                conn.execute(db.text("ALTER TABLE room_players ADD COLUMN is_master BOOLEAN DEFAULT FALSE"))
+                conn.execute(db.text("""
+                    UPDATE room_players
+                    SET is_master = TRUE
+                    WHERE id IN (
+                        SELECT MIN(id) FROM room_players GROUP BY room_id
+                    )
+                """))
+                conn.commit()
+                print("✅ Colonna is_master aggiunta")
+
+            # Verifica e aggiungi visible_to_all a characters
+            result = conn.execute(db.text("""
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_name='characters' AND column_name='visible_to_all'
+            """))
+            if not result.fetchone():
+                print("🔄 Aggiunta colonna visible_to_all a characters...")
+                conn.execute(db.text("ALTER TABLE characters ADD COLUMN visible_to_all BOOLEAN DEFAULT FALSE"))
+                conn.commit()
+                print("✅ Colonna visible_to_all aggiunta")
+    except Exception as e:
+        print(f"⚠️  Errore durante la migrazione dello schema: {str(e)}")
+        # Non bloccare l'avvio dell'app se la migrazione fallisce
 
 # Cache temporanea per le stanze attive (sacchetto in memoria)
 active_rooms_cache = {}  # room_id: {'bag': {...}, 'adrenaline': {}, 'confusion': {}}
