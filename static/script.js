@@ -344,14 +344,11 @@ riskAllBtn.addEventListener('click', () => {
         return;
     }
 
-    if (!confirm(`⚠️ Vuoi rischiare tutto ed estrarre altri ${tokensToRisk} token?`)) {
-        return;
-    }
-
     // Leggi i valori correnti dal display
     const currentSuccessi = parseInt(document.getElementById('successCount').textContent) || 0;
     const currentComplicazioni = parseInt(document.getElementById('complicationCount').textContent) || 0;
 
+    // Invia richiesta al server
     socket.emit('risk_all', {
         room_id: currentRoomId,
         num_tokens: tokensToRisk,
@@ -601,7 +598,9 @@ socket.on('risk_all_result', (data) => {
     addHistoryEntry(data.history);
 
     updateDrawButtons(); // Abilita/disabilita pulsanti in base ai token disponibili
-    showLog(`⚠️ ${data.player} ha rischiato tutto! +${data.drawn.length} token`, 'success');
+
+    // Mostra modal con risultati
+    showRiskAllModal(data);
 
     // Nascondi pulsante
     riskAllSection.classList.add('hidden');
@@ -1743,6 +1742,79 @@ saveNotesBtn.addEventListener('click', () => {
     });
 
     showLog('📝 Appunti salvati!', 'success');
+});
+
+// === RISK ALL MODAL ===
+
+const riskAllModal = document.getElementById('riskAllModal');
+const riskAllBody = document.getElementById('riskAllBody');
+const riskAllModalClose = document.getElementById('riskAllModalClose');
+
+function showRiskAllModal(data) {
+    // Calcola i token precedenti
+    const previousSuccessi = data.total_successi - data.successi;
+    const previousComplicazioni = data.total_complicazioni - data.complicazioni;
+
+    // Crea i token visuali per i nuovi token estratti
+    const newTokensHtml = data.drawn.map(token => {
+        const className = token === 'successo' ? 'token-success' : 'token-complication';
+        const emoji = token === 'successo' ? '⚪' : '⚫';
+        return `<div class="risk-token ${className}">${emoji}</div>`;
+    }).join('');
+
+    // Costruisci il contenuto del modal
+    const html = `
+        <div class="risk-all-current">
+            <h3 style="color: #ffd93d; margin-top: 0;">Token Iniziali</h3>
+            <p style="font-size: 1.3em; margin: 10px 0;">
+                <strong>${previousSuccessi}</strong> ⚪ Successi |
+                <strong>${previousComplicazioni}</strong> ⚫ Complicazioni
+            </p>
+        </div>
+
+        <div style="text-align: center; font-size: 2em; margin: 20px 0; color: #ff6b6b;">
+            ⬇️
+        </div>
+
+        <div class="risk-all-result">
+            <h3 style="color: #4CAF50; margin-top: 0;">🔥 Nuovi Token Estratti 🔥</h3>
+            <div class="risk-all-tokens">
+                ${newTokensHtml}
+            </div>
+        </div>
+
+        <div style="text-align: center; font-size: 2em; margin: 20px 0; color: #4CAF50;">
+            =
+        </div>
+
+        <div class="risk-all-result">
+            <h3 style="color: #4CAF50; margin-top: 0;">✨ Risultato Finale ✨</h3>
+            <p style="font-size: 1.5em; margin: 15px 0;">
+                <strong style="color: #fff;">${data.total_successi}</strong> ⚪ Successi
+            </p>
+            <p style="font-size: 1.5em; margin: 15px 0;">
+                <strong style="color: #fff;">${data.total_complicazioni}</strong> ⚫ Complicazioni
+            </p>
+        </div>
+    `;
+
+    riskAllBody.innerHTML = html;
+    riskAllModal.classList.add('active');
+
+    // Suono di successo
+    playSound('success');
+}
+
+// Chiudi modal
+riskAllModalClose.addEventListener('click', () => {
+    riskAllModal.classList.remove('active');
+});
+
+// Chiudi cliccando fuori
+riskAllModal.addEventListener('click', (e) => {
+    if (e.target === riskAllModal) {
+        riskAllModal.classList.remove('active');
+    }
 });
 
 // === DARK MODE ===

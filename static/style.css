@@ -139,11 +139,17 @@ body.dark-mode .history-log {
 }
 
 body.dark-mode .history-entry {
+    background: rgba(50, 50, 65, 0.6);
     border-bottom-color: rgba(255, 255, 255, 0.1);
+    color: #e0e0e0;
 }
 
 body.dark-mode .history-entry .player-name {
     color: #4CAF50;
+}
+
+body.dark-mode .history-entry .timestamp {
+    color: #999;
 }
 
 body.dark-mode .notes-editor {
@@ -1836,6 +1842,191 @@ input:checked + .slider:before {
 
 .notes-editor u {
     text-decoration-color: #4CAF50;
+}
+
+/* Risk All Modal */
+.risk-all-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+}
+
+.risk-all-modal.active {
+    display: flex;
+}
+
+.risk-all-content {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border: 3px solid #ff6b6b;
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 600px;
+    width: 90%;
+    position: relative;
+    box-shadow: 0 0 50px rgba(255, 107, 107, 0.5);
+    animation: modalPulse 2s infinite;
+}
+
+@keyframes modalPulse {
+    0%, 100% {
+        box-shadow: 0 0 50px rgba(255, 107, 107, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 80px rgba(255, 107, 107, 0.8);
+    }
+}
+
+.risk-all-content::before {
+    content: '🔥';
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 60px;
+    animation: fireFlicker 0.5s infinite alternate;
+}
+
+@keyframes fireFlicker {
+    0% {
+        transform: translateX(-50%) scale(1) rotate(-5deg);
+        filter: hue-rotate(0deg);
+    }
+    100% {
+        transform: translateX(-50%) scale(1.1) rotate(5deg);
+        filter: hue-rotate(20deg);
+    }
+}
+
+.risk-all-flames {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: hidden;
+    border-radius: 20px;
+}
+
+.flame {
+    position: absolute;
+    bottom: -50px;
+    width: 30px;
+    height: 60px;
+    background: linear-gradient(to top, #ff6b6b, #ffd93d);
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    opacity: 0.7;
+    animation: flameRise 3s infinite;
+}
+
+.flame:nth-child(1) { left: 10%; animation-delay: 0s; }
+.flame:nth-child(2) { left: 30%; animation-delay: 0.5s; }
+.flame:nth-child(3) { left: 50%; animation-delay: 1s; }
+.flame:nth-child(4) { left: 70%; animation-delay: 1.5s; }
+.flame:nth-child(5) { left: 90%; animation-delay: 2s; }
+
+@keyframes flameRise {
+    0% {
+        bottom: -50px;
+        opacity: 0.7;
+        transform: scale(1) rotate(0deg);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.2) rotate(10deg);
+    }
+    100% {
+        bottom: 110%;
+        opacity: 0;
+        transform: scale(0.8) rotate(-10deg);
+    }
+}
+
+.risk-all-title {
+    text-align: center;
+    font-size: 2em;
+    color: #ff6b6b;
+    margin-bottom: 30px;
+    text-shadow: 0 0 10px rgba(255, 107, 107, 0.8);
+    font-weight: bold;
+}
+
+.risk-all-body {
+    color: #e0e0e0;
+    font-size: 1.1em;
+    line-height: 1.6;
+    z-index: 1;
+    position: relative;
+}
+
+.risk-all-current {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 10px;
+    margin: 20px 0;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.risk-all-result {
+    background: rgba(76, 175, 80, 0.2);
+    padding: 20px;
+    border-radius: 10px;
+    margin: 20px 0;
+    border: 2px solid #4CAF50;
+}
+
+.risk-all-tokens {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 15px 0;
+}
+
+.risk-token {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3em;
+    animation: tokenBounce 0.5s ease;
+}
+
+@keyframes tokenBounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+.risk-all-close {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    font-size: 1.1em;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-top: 20px;
+    width: 100%;
+    font-weight: bold;
+    transition: all 0.3s;
+}
+
+.risk-all-close:hover {
+    background: #45a049;
+    transform: scale(1.05);
+}
+
+body.dark-mode .risk-all-content {
+    background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
 }
 
 @media (max-width: 768px) {
