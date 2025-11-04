@@ -200,6 +200,68 @@ body.dark-mode .player-status-card strong {
     color: #4CAF50;
 }
 
+/* Dark Mode - Sacchetto */
+body.dark-mode .bag-status {
+    background: rgba(50, 50, 65, 0.8);
+    color: #e0e0e0;
+}
+
+/* Dark Mode - Toggle Adrenalina e Confusione */
+body.dark-mode .status-toggle-group {
+    background: rgba(50, 50, 65, 0.8);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+body.dark-mode .switch-label {
+    color: #e0e0e0;
+}
+
+/* Dark Mode - Area estrazioni */
+body.dark-mode .draw-result {
+    background: rgba(50, 50, 65, 0.8);
+    color: #e0e0e0;
+}
+
+body.dark-mode .draw-info {
+    color: #e0e0e0;
+}
+
+body.dark-mode .draw-summary {
+    color: #e0e0e0;
+}
+
+/* Dark Mode - Tratti selezionati e modificatore manuale */
+body.dark-mode .traits-summary {
+    background: rgba(50, 50, 65, 0.9);
+    border-left-color: #4CAF50;
+    color: #e0e0e0;
+}
+
+body.dark-mode .traits-summary p {
+    color: #e0e0e0;
+}
+
+body.dark-mode .total-whites {
+    color: #4CAF50;
+}
+
+/* Dark Mode - Stati personaggio (Adrenalina/Confusione attive) */
+body.dark-mode .state-indicator {
+    background: rgba(50, 50, 65, 0.8);
+    border-left-color: #6c757d;
+    color: #e0e0e0;
+}
+
+body.dark-mode .state-indicator.active {
+    background: rgba(60, 60, 75, 0.9);
+    border-left-color: #ffc107;
+    color: #ffd54f;
+}
+
+body.dark-mode .state-indicator strong {
+    color: #e0e0e0;
+}
+
 .container {
     max-width: 1200px;
     margin: 0 auto;
