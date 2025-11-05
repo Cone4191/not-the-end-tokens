@@ -1824,13 +1824,20 @@ const traitsCollapsibleContent = document.getElementById('traitsCollapsibleConte
 const traitsToggleHeader = document.getElementById('traitsToggleHeader');
 
 // Toggle collapsible content
-traitsToggleHeader.addEventListener('click', () => {
+const toggleCollapse = () => {
     traitsCollapsibleContent.classList.toggle('collapsed');
     traitsCollapseBtn.classList.toggle('collapsed');
+};
+
+traitsToggleHeader.addEventListener('click', (e) => {
+    // Se il click è sul button, non fare nulla (lascia gestire al button handler)
+    if (e.target.closest('.collapse-btn')) return;
+    toggleCollapse();
 });
 
 traitsCollapseBtn.addEventListener('click', (e) => {
-    e.stopPropagation(); // Prevent header click event
+    e.stopPropagation(); // Previeni doppio toggle
+    toggleCollapse();
 });
 
 // === DARK MODE ===

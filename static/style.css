@@ -356,7 +356,7 @@ body.dark-mode .dark-mode-toggle .toggle-icon::after {
 }
 
 .hidden {
-    display: none;
+    display: none !important;
 }
 
 /* Form elements */
@@ -1315,6 +1315,27 @@ input:checked + .slider:before {
     border-color: #2a5298;
 }
 
+/* Resources section - same style as lessons */
+.resources-section {
+    margin-bottom: 20px;
+}
+
+.resources-section textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 10px;
+    border: 2px solid #e0e0e0;
+    border-radius: 5px;
+    font-family: inherit;
+    font-size: 0.95em;
+    resize: vertical;
+}
+
+.resources-section textarea:focus {
+    outline: none;
+    border-color: #2a5298;
+}
+
 /* ========== AZIONI SCHEDA ========== */
 
 .character-actions {
@@ -1739,7 +1760,7 @@ input:checked + .slider:before {
 }
 
 .modal.hidden {
-    display: none;
+    display: none !important;
 }
 
 .character-modal-content {
