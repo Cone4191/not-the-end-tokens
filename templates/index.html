@@ -118,6 +118,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <h3>Stanza: <span id="currentRoomId"></span></h3>
+                        <p class="players-list">Proprietario: <span id="roomOwner"></span></p>
                         <p class="players-list">Giocatori: <span id="playersList"></span></p>
                     </div>
                     <div style="display: flex; gap: 10px;">
@@ -240,21 +241,25 @@
                     </div>
                 </div>
 
-                <!-- Tratti semplificati a righe -->
+                <!-- La tua Scheda -->
                 <div class="traits-section">
                     <div class="collapsible-header" id="traitsToggleHeader">
-                        <h3>Tratti (Abilità e Qualità)</h3>
+                        <h3>La tua Scheda</h3>
                         <button type="button" class="collapse-btn" id="traitsCollapseBtn">
                             <span class="collapse-icon">▼</span>
                         </button>
                     </div>
                     <div class="collapsible-content" id="traitsCollapsibleContent">
-                    <p class="traits-help">
-                        🔵 Click su pulsante: <strong>Seleziona</strong> | 
-                        ⭐ Click su stellina: <strong>Potenzia</strong><br>
-                        Selezionato = +1⚪ | Selezionato + Potenziato = +2⚪
-                    </p>
-                    
+
+                    <div class="traits-header-section">
+                        <h4 style="margin-bottom: 10px;">Tratti (Abilità e Qualità)</h4>
+                        <p class="traits-help">
+                            🔵 Click su pulsante: <strong>Seleziona</strong> |
+                            ⭐ Click su stellina: <strong>Potenzia</strong><br>
+                            Selezionato = +1⚪ | Selezionato + Potenziato = +2⚪
+                        </p>
+                    </div>
+
                     <!-- Archetipo -->
                     <div class="trait-row">
                         <div class="trait-row-header">
@@ -303,7 +308,6 @@
                         </div>
                         <p class="total-whites"><strong>TOTALE BIANCHI: <span id="totalWhiteTokens">0</span> ⚪</strong></p>
                     </div>
-                </div>
 
                 <!-- Sventure -->
                 <div class="misfortunes-section">

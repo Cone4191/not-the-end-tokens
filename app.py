@@ -6,6 +6,11 @@ import uuid
 from datetime import datetime
 import os
 import json
+import sys
+
+# Fix encoding for Windows console
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'not-the-end-secret-key-change-in-production')
@@ -315,7 +320,11 @@ def handle_create_room(data):
         }
 
         join_room(room_id_str)
-        emit('room_created', {'room_id': room_id_str, 'player_name': player_name})
+        emit('room_created', {
+            'room_id': room_id_str,
+            'player_name': player_name,
+            'owner_name': player_name
+        })
 
     except Exception as e:
         db.session.rollback()
@@ -374,9 +383,15 @@ def handle_join_room(data):
 
         # Prepara dati stanza
         players_list = [p.player_name for p in room.players.all()]
+
+        # Ottieni il nome del proprietario
+        owner_player = room.players.filter_by(user_id=room.owner_id).first()
+        owner_name = owner_player.player_name if owner_player else 'Sconosciuto'
+
         room_data = {
             'room_id': room_id_str,
             'players': players_list,
+            'owner_name': owner_name,
             'bag': {
                 'successi': room.bag_successi,
                 'complicazioni': room.bag_complicazioni
@@ -392,7 +407,8 @@ def handle_join_room(data):
 
         emit('player_joined', {
             'player_name': player_name,
-            'players': players_list
+            'players': players_list,
+            'owner_name': owner_name
         }, room=room_id_str)
 
         # Carica scheda personaggio se esiste

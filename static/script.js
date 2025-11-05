@@ -60,6 +60,7 @@ const createRoomBtn = document.getElementById('createRoomBtn');
 const joinRoomBtn = document.getElementById('joinRoomBtn');
 const roomIdInput = document.getElementById('roomIdInput');
 const currentRoomIdSpan = document.getElementById('currentRoomId');
+const roomOwnerSpan = document.getElementById('roomOwner');
 const playersListSpan = document.getElementById('playersList');
 const createNewRoomBtn = document.getElementById('createNewRoomBtn');
 const joinRoomBtnDashboard = document.getElementById('joinRoomBtnDashboard');
@@ -486,7 +487,8 @@ socket.on('room_created', (data) => {
     currentRoomId = data.room_id;
     showGameSection();
     currentRoomIdSpan.textContent = data.room_id;
-    playersListSpan.textContent = data.player_name;
+    roomOwnerSpan.textContent = data.owner_name;
+    playersListSpan.textContent = '';
 
     // Carica le schede
     requestCharactersOnJoin();
@@ -499,7 +501,8 @@ socket.on('room_joined', (data) => {
     currentRoomId = data.room_id;
     showGameSection();
     currentRoomIdSpan.textContent = data.room_id;
-    updatePlayersList(data.room_data.players);
+    roomOwnerSpan.textContent = data.room_data.owner_name;
+    updatePlayersList(data.room_data.players, data.room_data.owner_name);
 
     // Aggiorna stato sacchetto
     const bag = data.room_data.bag;
@@ -521,7 +524,7 @@ socket.on('room_joined', (data) => {
 });
 
 socket.on('player_joined', (data) => {
-    updatePlayersList(data.players);
+    updatePlayersList(data.players, data.owner_name);
     showLog(`${data.player_name} si è unito alla stanza`, 'success');
 });
 
@@ -748,8 +751,10 @@ function enterRoom(roomId, savedPlayerName) {
     }
 }
 
-function updatePlayersList(players) {
-    playersListSpan.textContent = players.join(', ');
+function updatePlayersList(players, ownerName) {
+    // Rimuovi il proprietario dalla lista dei giocatori
+    const otherPlayers = players.filter(p => p !== ownerName);
+    playersListSpan.textContent = otherPlayers.length > 0 ? otherPlayers.join(', ') : 'Nessun altro giocatore';
 }
 
 function updateDrawButtons() {
